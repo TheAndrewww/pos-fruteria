@@ -2,56 +2,56 @@
 @import "tailwindcss";
 
 /* ============================================================
-   SISTEMA DE DISEÑO — POS MOTO REFACCIONARIA
-   Paleta oscura profesional, rápida de leer en tienda
+   SISTEMA DE DISEÑO — POS PAULÍN PREMIUM FRUITS
+   Paleta fresca y natural, optimizada para pantalla táctil 24"
    ============================================================ */
 
 @layer base {
   :root {
-    /* Colores base — Paleta Moto Refaccionaria LB */
-    --color-bg:          #f5f5f5;
+    /* Colores base — Paleta Paulín Premium Fruits */
+    --color-bg:          #faf9f6;
     --color-surface:     #ffffff;
-    --color-surface-2:   #ececec;
-    --color-border:      #d4d4d4;
-    --color-border-2:    #a3a3a3;
+    --color-surface-2:   #f0ede8;
+    --color-border:      #e0dbd3;
+    --color-border-2:    #bfb8ae;
 
     /* Texto */
-    --color-text:        #171717;
-    --color-text-muted:  #525252;
-    --color-text-dim:    #737373;
+    --color-text:        #1a1a1a;
+    --color-text-muted:  #5c5547;
+    --color-text-dim:    #8a8279;
 
-    /* Acento principal — Naranja LB (del logo) */
-    --color-primary:     #f47920;
-    --color-primary-h:   #e06810;
-    --color-primary-soft: rgba(244, 121, 32, 0.12);
+    /* Acento principal — Verde bosque */
+    --color-primary:     #2d6a4f;
+    --color-primary-h:   #1b4332;
+    --color-primary-soft: rgba(45, 106, 79, 0.12);
 
-    /* Secundario — Grafito oscuro (del logo) */
-    --color-secondary:   #2d2d2d;
-    --color-secondary-h: #1a1a1a;
-    --color-secondary-soft: rgba(45, 45, 45, 0.12);
+    /* Secundario — Durazno cálido */
+    --color-secondary:   #d4a373;
+    --color-secondary-h: #c08b5c;
+    --color-secondary-soft: rgba(212, 163, 115, 0.15);
 
-    /* Acento — Dorado */
-    --color-accent:      #f59e0b;
-    --color-accent-h:    #d97706;
-    --color-accent-soft: rgba(245, 158, 11, 0.15);
+    /* Acento — Naranja fruta */
+    --color-accent:      #e76f51;
+    --color-accent-h:    #d45a3a;
+    --color-accent-soft: rgba(231, 111, 81, 0.12);
 
     /* Estados */
-    --color-success:     #16a34a;
-    --color-success-soft: rgba(22, 163, 74, 0.1);
-    --color-warning:     #d97706;
-    --color-warning-soft: rgba(217, 119, 6, 0.1);
-    --color-danger:      #dc2626;
-    --color-danger-soft:  rgba(220, 38, 38, 0.08);
+    --color-success:     #40916c;
+    --color-success-soft: rgba(64, 145, 108, 0.1);
+    --color-warning:     #e9c46a;
+    --color-warning-soft: rgba(233, 196, 106, 0.15);
+    --color-danger:      #e63946;
+    --color-danger-soft:  rgba(230, 57, 70, 0.08);
 
     /* Precios */
-    --color-menudeo:     #f47920;
-    --color-mayoreo:     #9333ea;
-    --color-especial:    #0d9488;
+    --color-menudeo:     #2d6a4f;
+    --color-mayoreo:     #7209b7;
+    --color-especial:    #e76f51;
 
     /* Sync status */
-    --color-sync-ok:     #16a34a;
-    --color-sync-pending:#d97706;
-    --color-sync-off:    #dc2626;
+    --color-sync-ok:     #40916c;
+    --color-sync-pending:#e9c46a;
+    --color-sync-off:    #e63946;
   }
 
   * {
