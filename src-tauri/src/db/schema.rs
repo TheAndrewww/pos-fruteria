@@ -1,5 +1,4 @@
-// db/schema.rs — Schema SQLite completo para Fase 1
-// POS Moto Refaccionaria
+// db/schema.rs — Schema SQLite para POS Paulín Premium Fruits
 
 pub const SCHEMA_V1: &str = r#"
 PRAGMA journal_mode=WAL;
@@ -20,7 +19,7 @@ CREATE TABLE IF NOT EXISTS roles (
 CREATE TABLE IF NOT EXISTS permisos (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
     rol_id    INTEGER NOT NULL REFERENCES roles(id),
-    modulo    TEXT NOT NULL,  -- ventas | inventario | precios | pedidos | reportes | usuarios | bitacora
+    modulo    TEXT NOT NULL,  -- ventas | inventario | precios | reportes | usuarios | merma
     accion    TEXT NOT NULL,  -- ver | crear | editar | eliminar | anular
     permitido INTEGER NOT NULL DEFAULT 0
 );
@@ -51,41 +50,12 @@ CREATE TABLE IF NOT EXISTS sesiones (
 );
 
 -- ============================================================
--- CATEGORÍAS Y PROVEEDORES
+-- CATEGORÍAS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS categorias (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     nombre      TEXT NOT NULL UNIQUE,
     descripcion TEXT
-);
-
-CREATE TABLE IF NOT EXISTS proveedores (
-    id       INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre   TEXT NOT NULL,
-    contacto TEXT,
-    telefono TEXT,
-    email    TEXT,
-    notas    TEXT,
-    activo   INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    synced_at  TEXT
-);
-
--- ============================================================
--- CLIENTES
--- ============================================================
-CREATE TABLE IF NOT EXISTS clientes (
-    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre               TEXT NOT NULL,
-    telefono             TEXT,
-    email                TEXT,
-    descuento_porcentaje REAL NOT NULL DEFAULT 0,  -- % descuento fijo del cliente (ej: 10 = 10%)
-    activo               INTEGER NOT NULL DEFAULT 1,
-    notas                TEXT,
-    created_at           TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at           TEXT NOT NULL DEFAULT (datetime('now')),
-    synced_at            TEXT
 );
 
 -- ============================================================
@@ -104,7 +74,7 @@ CREATE TABLE IF NOT EXISTS config_descuentos (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS config_negocio (
     id          INTEGER PRIMARY KEY DEFAULT 1,
-    nombre      TEXT NOT NULL DEFAULT 'Moto Refaccionaria',
+    nombre      TEXT NOT NULL DEFAULT 'Paulín Premium Fruits',
     direccion   TEXT NOT NULL DEFAULT '',
     telefono    TEXT NOT NULL DEFAULT '',
     rfc         TEXT NOT NULL DEFAULT '',
@@ -114,28 +84,36 @@ CREATE TABLE IF NOT EXISTS config_negocio (
 
 -- ============================================================
 -- PRODUCTOS / CATÁLOGO
+-- Adaptado para futería: unidades (kg/caja/pieza), precio por caja,
+-- emoji y color para botones táctiles, temporada
 -- ============================================================
 CREATE TABLE IF NOT EXISTS productos (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    codigo          TEXT NOT NULL UNIQUE,
-    codigo_tipo     TEXT NOT NULL DEFAULT 'INTERNO',  -- EAN13 | CODE128 | QR | INTERNO
+    codigo          TEXT NOT NULL UNIQUE,           -- código interno auto-generado
+    codigo_tipo     TEXT NOT NULL DEFAULT 'INTERNO',
     nombre          TEXT NOT NULL,
     descripcion     TEXT,
     categoria_id    INTEGER REFERENCES categorias(id),
+    unidad          TEXT NOT NULL DEFAULT 'kg',     -- kg | caja | pieza | litro
     precio_costo    REAL NOT NULL DEFAULT 0,
-    precio_venta    REAL NOT NULL DEFAULT 0,
-    stock_actual    REAL NOT NULL DEFAULT 0,
+    precio_venta    REAL NOT NULL DEFAULT 0,        -- precio por unidad (por kg, por pieza, etc.)
+    precio_mayoreo  REAL,                           -- precio especial mayoreo (por kg/unidad)
+    precio_por_caja REAL,                           -- precio cuando se vende caja completa
+    kg_por_caja     REAL,                           -- cuántos kg tiene una caja (conversión)
+    stock_actual    REAL NOT NULL DEFAULT 0,        -- siempre en la unidad base (kg/pieza/litro)
     stock_minimo    REAL NOT NULL DEFAULT 0,
-    proveedor_id    INTEGER REFERENCES proveedores(id),
+    es_temporada    INTEGER NOT NULL DEFAULT 0,     -- 1 = producto de temporada
+    emoji           TEXT,                           -- emoji para el botón del POS (🥭🍉🍈)
+    color_boton     TEXT,                           -- color hex para el botón (#FF9F1C)
     foto_url        TEXT,
-    search_text     TEXT,                       -- pre-calculado: código+nombre+desc en minúsculas sin acentos
-    activo          INTEGER NOT NULL DEFAULT 1,
+    search_text     TEXT,                           -- pre-calculado para búsqueda rápida
+    activo          INTEGER NOT NULL DEFAULT 1,     -- 0 = oculto del POS (fuera de temporada)
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
     synced_at       TEXT
 );
 
--- Secuencia para códigos internos MR-XXXXX
+-- Secuencia para códigos internos PF-XXXXX
 CREATE TABLE IF NOT EXISTS codigo_secuencia (
     id           INTEGER PRIMARY KEY DEFAULT 1,
     ultimo_valor INTEGER NOT NULL DEFAULT 0
@@ -154,7 +132,6 @@ CREATE TABLE IF NOT EXISTS ventas (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     folio           TEXT NOT NULL UNIQUE,
     usuario_id      INTEGER NOT NULL REFERENCES usuarios(id),
-    cliente_id      INTEGER REFERENCES clientes(id),
     subtotal        REAL NOT NULL DEFAULT 0,
     descuento       REAL NOT NULL DEFAULT 0,
     total           REAL NOT NULL DEFAULT 0,
@@ -172,7 +149,8 @@ CREATE TABLE IF NOT EXISTS venta_detalle (
     id                   INTEGER PRIMARY KEY AUTOINCREMENT,
     venta_id             INTEGER NOT NULL REFERENCES ventas(id),
     producto_id          INTEGER NOT NULL REFERENCES productos(id),
-    cantidad             REAL NOT NULL DEFAULT 1,
+    cantidad             REAL NOT NULL DEFAULT 1,       -- puede ser decimal: 2.5 kg
+    unidad               TEXT NOT NULL DEFAULT 'kg',    -- kg | caja | pieza
     precio_original      REAL NOT NULL DEFAULT 0,
     descuento_porcentaje REAL NOT NULL DEFAULT 0,
     descuento_monto      REAL NOT NULL DEFAULT 0,
@@ -182,77 +160,38 @@ CREATE TABLE IF NOT EXISTS venta_detalle (
 );
 
 -- ============================================================
--- PRESUPUESTOS
+-- MERMAS (pérdida de producto: maduración, daño, robo, etc.)
 -- ============================================================
-CREATE TABLE IF NOT EXISTS presupuestos (
-    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    folio       TEXT NOT NULL UNIQUE,
-    usuario_id  INTEGER NOT NULL REFERENCES usuarios(id),
-    cliente_id  INTEGER REFERENCES clientes(id),
-    estado      TEXT NOT NULL DEFAULT 'pendiente',  -- pendiente | aceptado | convertido | cancelado
-    notas       TEXT,
-    vigencia_dias INTEGER NOT NULL DEFAULT 7,
-    total       REAL NOT NULL DEFAULT 0,
-    fecha       TEXT NOT NULL DEFAULT (datetime('now')),
-    venta_id    INTEGER REFERENCES ventas(id),
-    synced_at   TEXT
-);
-
-CREATE TABLE IF NOT EXISTS presupuesto_detalle (
-    id                   INTEGER PRIMARY KEY AUTOINCREMENT,
-    presupuesto_id       INTEGER NOT NULL REFERENCES presupuestos(id),
-    producto_id          INTEGER REFERENCES productos(id),
-    descripcion          TEXT NOT NULL,
-    cantidad             REAL NOT NULL DEFAULT 1,
-    precio_unitario      REAL NOT NULL DEFAULT 0,
-    descuento_porcentaje REAL NOT NULL DEFAULT 0,
-    subtotal             REAL NOT NULL DEFAULT 0
-);
-
--- ============================================================
--- ÓRDENES DE PEDIDO A PROVEEDORES
--- ============================================================
-CREATE TABLE IF NOT EXISTS ordenes_pedido (
-    id               INTEGER PRIMARY KEY AUTOINCREMENT,
-    folio            TEXT NOT NULL UNIQUE,
-    usuario_id       INTEGER NOT NULL REFERENCES usuarios(id),
-    origen           TEXT NOT NULL DEFAULT 'POS',  -- POS | WEB
-    proveedor_id     INTEGER REFERENCES proveedores(id),
-    estado           TEXT NOT NULL DEFAULT 'borrador',  -- borrador | enviada | recibida_parcial | recibida_completa
-    notas            TEXT,
-    fecha_pedido     TEXT NOT NULL DEFAULT (datetime('now')),
-    fecha_recepcion  TEXT,
-    synced_at        TEXT
-);
-
-CREATE TABLE IF NOT EXISTS orden_pedido_detalle (
-    id               INTEGER PRIMARY KEY AUTOINCREMENT,
-    orden_id         INTEGER NOT NULL REFERENCES ordenes_pedido(id),
-    producto_id      INTEGER NOT NULL REFERENCES productos(id),
-    cantidad_pedida  REAL NOT NULL DEFAULT 1,
-    cantidad_recibida REAL NOT NULL DEFAULT 0,
-    precio_costo     REAL NOT NULL DEFAULT 0
-);
-
--- ============================================================
--- RECEPCIONES DE MERCANCÍA
--- ============================================================
-CREATE TABLE IF NOT EXISTS recepciones (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    orden_id     INTEGER REFERENCES ordenes_pedido(id),
-    usuario_id   INTEGER NOT NULL REFERENCES usuarios(id),
-    proveedor_id INTEGER REFERENCES proveedores(id),
-    fecha        TEXT NOT NULL DEFAULT (datetime('now')),
-    notas        TEXT,
-    synced_at    TEXT
-);
-
-CREATE TABLE IF NOT EXISTS recepcion_detalle (
+CREATE TABLE IF NOT EXISTS mermas (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    recepcion_id  INTEGER NOT NULL REFERENCES recepciones(id),
     producto_id   INTEGER NOT NULL REFERENCES productos(id),
-    cantidad      REAL NOT NULL DEFAULT 1,
-    precio_costo  REAL NOT NULL DEFAULT 0
+    cantidad      REAL NOT NULL,                -- kg/piezas/cajas perdidas
+    unidad        TEXT NOT NULL DEFAULT 'kg',
+    motivo        TEXT NOT NULL DEFAULT 'maduracion',  -- maduracion | daño | robo | otro
+    notas         TEXT,
+    usuario_id    INTEGER NOT NULL REFERENCES usuarios(id),
+    fecha         TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    created_at    TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    deleted_at    TEXT,
+    synced_at     TEXT
+);
+
+-- ============================================================
+-- ENTRADAS DE MERCANCÍA (compra de producto)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS entradas_mercancia (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    producto_id   INTEGER NOT NULL REFERENCES productos(id),
+    cantidad      REAL NOT NULL,
+    unidad        TEXT NOT NULL DEFAULT 'kg',
+    precio_costo  REAL,                          -- costo de esta entrada específica
+    proveedor     TEXT,                          -- texto libre, sin catálogo de proveedores
+    notas         TEXT,
+    usuario_id    INTEGER NOT NULL REFERENCES usuarios(id),
+    fecha         TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    created_at    TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    deleted_at    TEXT,
+    synced_at     TEXT
 );
 
 -- ============================================================
@@ -387,7 +326,7 @@ CREATE TABLE IF NOT EXISTS devolucion_folio_secuencia (
 );
 
 -- ============================================================
--- DISPOSITIVOS MÓVILES CONECTADOS (Fase 3.1)
+-- DISPOSITIVOS MÓVILES CONECTADOS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS dispositivos_conectados (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -402,13 +341,14 @@ CREATE TABLE IF NOT EXISTS dispositivos_conectados (
 );
 
 -- ============================================================
--- ÍNDICES (velocidad crítica del POS)
+-- ÍNDICES
 -- ============================================================
 CREATE INDEX IF NOT EXISTS idx_productos_codigo     ON productos(codigo);
 CREATE INDEX IF NOT EXISTS idx_productos_nombre     ON productos(nombre);
 CREATE INDEX IF NOT EXISTS idx_productos_categoria  ON productos(categoria_id);
 CREATE INDEX IF NOT EXISTS idx_productos_stock      ON productos(stock_actual);
 CREATE INDEX IF NOT EXISTS idx_productos_search     ON productos(search_text);
+CREATE INDEX IF NOT EXISTS idx_productos_activo     ON productos(activo);
 CREATE INDEX IF NOT EXISTS idx_ventas_fecha         ON ventas(fecha);
 CREATE INDEX IF NOT EXISTS idx_ventas_usuario       ON ventas(usuario_id);
 CREATE INDEX IF NOT EXISTS idx_ventas_folio         ON ventas(folio);
@@ -416,24 +356,27 @@ CREATE INDEX IF NOT EXISTS idx_vd_venta             ON venta_detalle(venta_id);
 CREATE INDEX IF NOT EXISTS idx_vd_producto          ON venta_detalle(producto_id);
 CREATE INDEX IF NOT EXISTS idx_audit_usuario_fecha  ON audit_log(usuario_id, fecha);
 CREATE INDEX IF NOT EXISTS idx_audit_accion_fecha   ON audit_log(accion, fecha);
-CREATE INDEX IF NOT EXISTS idx_clientes_telefono    ON clientes(telefono);
 CREATE INDEX IF NOT EXISTS idx_cortes_fecha         ON cortes(created_at);
 CREATE INDEX IF NOT EXISTS idx_movimientos_fecha    ON movimientos_caja(fecha);
 CREATE INDEX IF NOT EXISTS idx_devoluciones_venta   ON devoluciones(venta_id);
 CREATE INDEX IF NOT EXISTS idx_devoluciones_fecha   ON devoluciones(fecha);
 CREATE INDEX IF NOT EXISTS idx_devdet_devolucion    ON devolucion_detalle(devolucion_id);
 CREATE INDEX IF NOT EXISTS idx_devdet_vdetalle      ON devolucion_detalle(venta_detalle_id);
-CREATE INDEX IF NOT EXISTS idx_disp_jti              ON dispositivos_conectados(jwt_jti);
-CREATE INDEX IF NOT EXISTS idx_disp_usuario          ON dispositivos_conectados(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_disp_jti             ON dispositivos_conectados(jwt_jti);
+CREATE INDEX IF NOT EXISTS idx_disp_usuario         ON dispositivos_conectados(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_mermas_producto      ON mermas(producto_id);
+CREATE INDEX IF NOT EXISTS idx_mermas_fecha         ON mermas(fecha);
+CREATE INDEX IF NOT EXISTS idx_entradas_producto    ON entradas_mercancia(producto_id);
+CREATE INDEX IF NOT EXISTS idx_entradas_fecha       ON entradas_mercancia(fecha);
 "#;
 
-/// Datos iniciales del sistema (roles, permisos, config)
+/// Datos iniciales del sistema (roles, permisos, config, categorías de frutas)
 pub const SEED_DATA: &str = r#"
 -- Insertar roles base si no existen
 INSERT OR IGNORE INTO roles (id, nombre, descripcion, es_admin) VALUES
     (1, 'dueño',       'Acceso total al sistema',         1),
     (2, 'vendedor',    'Realizar ventas y cobrar',        0),
-    (3, 'almacenista', 'Gestión de inventario y pedidos', 0);
+    (3, 'almacenista', 'Gestión de inventario y merma',   0);
 
 -- Configuración de descuentos por defecto
 INSERT OR IGNORE INTO config_descuentos (id, descuento_max_vendedor_pct, descuento_max_total_pct, precio_minimo_global_margen)
@@ -441,7 +384,7 @@ INSERT OR IGNORE INTO config_descuentos (id, descuento_max_vendedor_pct, descuen
 
 -- Configuración de negocio por defecto
 INSERT OR IGNORE INTO config_negocio (id, nombre, direccion, telefono, rfc, mensaje_pie)
-    VALUES (1, 'Moto Refaccionaria', '', '', '', '¡Gracias por su compra!');
+    VALUES (1, 'Paulín Premium Fruits', '', '', '', '¡Gracias por su compra!');
 
 -- Secuencia inicial de códigos internos
 INSERT OR IGNORE INTO codigo_secuencia (id, ultimo_valor) VALUES (1, 0);
@@ -454,52 +397,46 @@ INSERT OR IGNORE INTO devolucion_folio_secuencia (id, ultimo_valor) VALUES (1, 0
 
 -- Permisos del DUEÑO (acceso total)
 INSERT OR IGNORE INTO permisos (rol_id, modulo, accion, permitido) VALUES
-    (1, 'ventas',     'ver',      1), (1, 'ventas',     'crear',    1),
-    (1, 'ventas',     'editar',   1), (1, 'ventas',     'eliminar', 1),
-    (1, 'ventas',     'anular',   1),
-    (1, 'devoluciones','ver',     1), (1, 'devoluciones','crear',   1),
-    (1, 'inventario', 'ver',      1), (1, 'inventario', 'crear',    1),
-    (1, 'inventario', 'editar',   1), (1, 'inventario', 'eliminar', 1),
-    (1, 'precios',    'ver',      1), (1, 'precios',    'editar',   1),
-    (1, 'pedidos',    'ver',      1), (1, 'pedidos',    'crear',    1),
-    (1, 'pedidos',    'editar',   1),
-    (1, 'reportes',   'ver',      1),
-    (1, 'usuarios',   'ver',      1), (1, 'usuarios',   'crear',    1),
-    (1, 'usuarios',   'editar',   1), (1, 'usuarios',   'eliminar', 1),
-    (1, 'bitacora',   'ver',      1);
+    (1, 'ventas',      'ver',      1), (1, 'ventas',      'crear',    1),
+    (1, 'ventas',      'editar',   1), (1, 'ventas',      'eliminar', 1),
+    (1, 'ventas',      'anular',   1),
+    (1, 'devoluciones','ver',      1), (1, 'devoluciones','crear',    1),
+    (1, 'inventario',  'ver',      1), (1, 'inventario',  'crear',    1),
+    (1, 'inventario',  'editar',   1), (1, 'inventario',  'eliminar', 1),
+    (1, 'precios',     'ver',      1), (1, 'precios',     'editar',   1),
+    (1, 'merma',       'ver',      1), (1, 'merma',       'crear',    1),
+    (1, 'reportes',    'ver',      1),
+    (1, 'usuarios',    'ver',      1), (1, 'usuarios',    'crear',    1),
+    (1, 'usuarios',    'editar',   1), (1, 'usuarios',    'eliminar', 1),
+    (1, 'bitacora',    'ver',      1);
 
 -- Permisos del VENDEDOR
 INSERT OR IGNORE INTO permisos (rol_id, modulo, accion, permitido) VALUES
-    (2, 'ventas',     'ver',      1), (2, 'ventas',     'crear',    1),
-    (2, 'ventas',     'anular',   0),
-    (2, 'devoluciones','ver',     1), (2, 'devoluciones','crear',   1),
-    (2, 'inventario', 'ver',      1), (2, 'inventario', 'crear',    1),
-    (2, 'inventario', 'editar',   1),
-    (2, 'precios',    'ver',      0), (2, 'precios',    'editar',   0),
-    (2, 'pedidos',    'ver',      1), (2, 'pedidos',    'crear',    1),
-    (2, 'reportes',   'ver',      0),
-    (2, 'usuarios',   'ver',      0),
-    (2, 'bitacora',   'ver',      0);
+    (2, 'ventas',      'ver',      1), (2, 'ventas',      'crear',    1),
+    (2, 'ventas',      'anular',   0),
+    (2, 'devoluciones','ver',      1), (2, 'devoluciones','crear',    1),
+    (2, 'inventario',  'ver',      1), (2, 'inventario',  'crear',    0),
+    (2, 'inventario',  'editar',   0),
+    (2, 'precios',     'ver',      0), (2, 'precios',     'editar',   0),
+    (2, 'merma',       'ver',      1), (2, 'merma',       'crear',    1),
+    (2, 'reportes',    'ver',      0),
+    (2, 'usuarios',    'ver',      0),
+    (2, 'bitacora',    'ver',      0);
 
 -- Permisos del ALMACENISTA
 INSERT OR IGNORE INTO permisos (rol_id, modulo, accion, permitido) VALUES
-    (3, 'ventas',     'ver',      0), (3, 'ventas',     'crear',    0),
-    (3, 'inventario', 'ver',      1), (3, 'inventario', 'crear',    1),
-    (3, 'inventario', 'editar',   1),
-    (3, 'pedidos',    'ver',      1), (3, 'pedidos',    'crear',    1),
-    (3, 'precios',    'ver',      0), (3, 'reportes',   'ver',      0),
-    (3, 'usuarios',   'ver',      0), (3, 'bitacora',   'ver',      0);
+    (3, 'ventas',      'ver',      0), (3, 'ventas',      'crear',    0),
+    (3, 'inventario',  'ver',      1), (3, 'inventario',  'crear',    1),
+    (3, 'inventario',  'editar',   1),
+    (3, 'merma',       'ver',      1), (3, 'merma',       'crear',    1),
+    (3, 'precios',     'ver',      0), (3, 'reportes',    'ver',      0),
+    (3, 'usuarios',    'ver',      0), (3, 'bitacora',    'ver',      0);
 
--- Categorías base para moto refaccionaria
+-- Categorías base para futería
 INSERT OR IGNORE INTO categorias (nombre, descripcion) VALUES
-    ('Frenos',          'Balatas, pastillas, discos, cables de freno'),
-    ('Cadenas y Piñones', 'Cadenas, piñones, coronas, sprockets'),
-    ('Aceites y Lubricantes', 'Aceite de motor, lubricante de cadena, fluido de frenos'),
-    ('Eléctrico',       'Bujías, focos, faros, interruptores, cableado'),
-    ('Suspensión',      'Amortiguadores, horquillas, resortes'),
-    ('Motor',           'Pistones, válvulas, juntas, filtros de aire'),
-    ('Carrocería',      'Espejos, calaveras, guardafangos, plásticos'),
-    ('Transmisión',     'Clutch, cables, palancas, embrague'),
-    ('Neumáticos',      'Llantas, cámaras, válvulas'),
-    ('Accesorios',      'Llaveros, fundas, accesorios generales');
+    ('Frutas de Temporada', 'Mangos, ciruelas, duraznos y frutas estacionales'),
+    ('Frutas Todo el Año',  'Sandía, melón, naranja, plátano y frutas permanentes'),
+    ('Fruta Preparada',     'Fruta picada, ensaladas, vasos preparados'),
+    ('Bebidas',             'Jugos naturales, aguas frescas'),
+    ('Complementos',        'Chamoy, chile, limón, sal, granola');
 "#;
