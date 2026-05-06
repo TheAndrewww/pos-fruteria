@@ -1,4 +1,4 @@
-// commands/productos.rs — CRUD de productos y generación de códigos internos
+// commands/productos.rs — CRUD de productos para Paulín Premium Fruits
 
 use serde::{Deserialize, Serialize};
 use tauri::State;
@@ -16,12 +16,17 @@ pub struct Producto {
     pub descripcion: Option<String>,
     pub categoria_id: Option<i64>,
     pub categoria_nombre: Option<String>,
+    pub unidad: String,
     pub precio_costo: f64,
     pub precio_venta: f64,
+    pub precio_mayoreo: Option<f64>,
+    pub precio_por_caja: Option<f64>,
+    pub kg_por_caja: Option<f64>,
     pub stock_actual: f64,
     pub stock_minimo: f64,
-    pub proveedor_id: Option<i64>,
-    pub proveedor_nombre: Option<String>,
+    pub es_temporada: bool,
+    pub emoji: Option<String>,
+    pub color_boton: Option<String>,
     pub foto_url: Option<String>,
     pub activo: bool,
 }
@@ -33,11 +38,17 @@ pub struct NuevoProducto {
     pub nombre: String,
     pub descripcion: Option<String>,
     pub categoria_id: Option<i64>,
+    pub unidad: Option<String>,
     pub precio_costo: f64,
     pub precio_venta: f64,
+    pub precio_mayoreo: Option<f64>,
+    pub precio_por_caja: Option<f64>,
+    pub kg_por_caja: Option<f64>,
     pub stock_actual: f64,
     pub stock_minimo: f64,
-    pub proveedor_id: Option<i64>,
+    pub es_temporada: Option<bool>,
+    pub emoji: Option<String>,
+    pub color_boton: Option<String>,
     pub foto_url: Option<String>,
 }
 
@@ -48,10 +59,16 @@ pub struct ActualizarProducto {
     pub nombre: String,
     pub descripcion: Option<String>,
     pub categoria_id: Option<i64>,
+    pub unidad: Option<String>,
     pub precio_costo: f64,
     pub precio_venta: f64,
+    pub precio_mayoreo: Option<f64>,
+    pub precio_por_caja: Option<f64>,
+    pub kg_por_caja: Option<f64>,
     pub stock_minimo: f64,
-    pub proveedor_id: Option<i64>,
+    pub es_temporada: Option<bool>,
+    pub emoji: Option<String>,
+    pub color_boton: Option<String>,
     pub foto_url: Option<String>,
 }
 
@@ -62,26 +79,7 @@ pub struct Categoria {
     pub descripcion: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct Proveedor {
-    pub id: i64,
-    pub nombre: String,
-    pub contacto: Option<String>,
-    pub telefono: Option<String>,
-    pub email: Option<String>,
-    pub notas: Option<String>,
-    pub activo: bool,
-}
 
-#[derive(Deserialize)]
-pub struct ActualizarProveedor {
-    pub id: i64,
-    pub nombre: String,
-    pub contacto: Option<String>,
-    pub telefono: Option<String>,
-    pub email: Option<String>,
-    pub notas: Option<String>,
-}
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Cliente {
@@ -127,13 +125,14 @@ pub fn listar_productos(state: State<'_, AppState>) -> Vec<Producto> {
     let mut stmt = db.prepare(
         r#"
         SELECT p.id, p.codigo, p.codigo_tipo, p.nombre, p.descripcion,
-               p.categoria_id, c.nombre, p.precio_costo, p.precio_venta,
-               p.stock_actual, p.stock_minimo, p.proveedor_id, pr.nombre,
+               p.categoria_id, c.nombre, p.unidad,
+               p.precio_costo, p.precio_venta, p.precio_mayoreo,
+               p.precio_por_caja, p.kg_por_caja,
+               p.stock_actual, p.stock_minimo,
+               p.es_temporada, p.emoji, p.color_boton,
                p.foto_url, p.activo
         FROM productos p
         LEFT JOIN categorias c ON c.id = p.categoria_id
-        LEFT JOIN proveedores pr ON pr.id = p.proveedor_id
-        WHERE p.activo = 1
         ORDER BY p.nombre ASC
         "#,
     ).unwrap();
@@ -147,14 +146,19 @@ pub fn listar_productos(state: State<'_, AppState>) -> Vec<Producto> {
             descripcion: row.get(4)?,
             categoria_id: row.get(5)?,
             categoria_nombre: row.get(6)?,
-            precio_costo: row.get(7)?,
-            precio_venta: row.get(8)?,
-            stock_actual: row.get(9)?,
-            stock_minimo: row.get(10)?,
-            proveedor_id: row.get(11)?,
-            proveedor_nombre: row.get(12)?,
-            foto_url: row.get(13)?,
-            activo: row.get(14)?,
+            unidad: row.get(7)?,
+            precio_costo: row.get(8)?,
+            precio_venta: row.get(9)?,
+            precio_mayoreo: row.get(10)?,
+            precio_por_caja: row.get(11)?,
+            kg_por_caja: row.get(12)?,
+            stock_actual: row.get(13)?,
+            stock_minimo: row.get(14)?,
+            es_temporada: row.get(15)?,
+            emoji: row.get(16)?,
+            color_boton: row.get(17)?,
+            foto_url: row.get(18)?,
+            activo: row.get(19)?,
         })
     }).unwrap()
     .filter_map(|r| r.ok())
@@ -171,12 +175,14 @@ pub fn obtener_producto_por_codigo(
     db.query_row(
         r#"
         SELECT p.id, p.codigo, p.codigo_tipo, p.nombre, p.descripcion,
-               p.categoria_id, c.nombre, p.precio_costo, p.precio_venta,
-               p.stock_actual, p.stock_minimo, p.proveedor_id, pr.nombre,
+               p.categoria_id, c.nombre, p.unidad,
+               p.precio_costo, p.precio_venta, p.precio_mayoreo,
+               p.precio_por_caja, p.kg_por_caja,
+               p.stock_actual, p.stock_minimo,
+               p.es_temporada, p.emoji, p.color_boton,
                p.foto_url, p.activo
         FROM productos p
         LEFT JOIN categorias c ON c.id = p.categoria_id
-        LEFT JOIN proveedores pr ON pr.id = p.proveedor_id
         WHERE p.codigo = ? AND p.activo = 1
         "#,
         rusqlite::params![codigo],
@@ -189,20 +195,25 @@ pub fn obtener_producto_por_codigo(
                 descripcion: row.get(4)?,
                 categoria_id: row.get(5)?,
                 categoria_nombre: row.get(6)?,
-                precio_costo: row.get(7)?,
-                precio_venta: row.get(8)?,
-                stock_actual: row.get(9)?,
-                stock_minimo: row.get(10)?,
-                proveedor_id: row.get(11)?,
-                proveedor_nombre: row.get(12)?,
-                foto_url: row.get(13)?,
-                activo: row.get(14)?,
+                unidad: row.get(7)?,
+                precio_costo: row.get(8)?,
+                precio_venta: row.get(9)?,
+                precio_mayoreo: row.get(10)?,
+                precio_por_caja: row.get(11)?,
+                kg_por_caja: row.get(12)?,
+                stock_actual: row.get(13)?,
+                stock_minimo: row.get(14)?,
+                es_temporada: row.get(15)?,
+                emoji: row.get(16)?,
+                color_boton: row.get(17)?,
+                foto_url: row.get(18)?,
+                activo: row.get(19)?,
             })
         },
     ).ok()
 }
 
-/// Generar código interno MR-XXXXX
+/// Generar código interno PF-XXXXX
 #[tauri::command]
 pub fn generar_codigo_interno(state: State<'_, AppState>) -> Result<String, String> {
     let db = state.db.lock().unwrap();
@@ -220,7 +231,7 @@ pub fn generar_codigo_interno(state: State<'_, AppState>) -> Result<String, Stri
         rusqlite::params![nuevo],
     ).map_err(|e| e.to_string())?;
 
-    Ok(format!("MR-{:05}", nuevo))
+    Ok(format!("PF-{:05}", nuevo))
 }
 
 /// Crear un nuevo producto
@@ -245,11 +256,13 @@ pub fn crear_producto(
                 "UPDATE codigo_secuencia SET ultimo_valor = ? WHERE id = 1",
                 rusqlite::params![nuevo],
             ).map_err(|e| e.to_string())?;
-            format!("MR-{:05}", nuevo)
+            format!("PF-{:05}", nuevo)
         }
     };
 
     let codigo_tipo = producto.codigo_tipo.unwrap_or_else(|| "INTERNO".to_string());
+    let unidad = producto.unidad.unwrap_or_else(|| "kg".to_string());
+    let es_temporada = producto.es_temporada.unwrap_or(false);
     let search_text = normalizar_texto(&format!("{} {} {}",
         codigo,
         producto.nombre,
@@ -260,15 +273,17 @@ pub fn crear_producto(
 
     db.execute(
         r#"INSERT INTO productos
-           (codigo, codigo_tipo, nombre, descripcion, categoria_id,
-            precio_costo, precio_venta,
-            stock_actual, stock_minimo, proveedor_id, foto_url, search_text,
-            created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
+           (codigo, codigo_tipo, nombre, descripcion, categoria_id, unidad,
+            precio_costo, precio_venta, precio_mayoreo, precio_por_caja, kg_por_caja,
+            stock_actual, stock_minimo, es_temporada, emoji, color_boton,
+            foto_url, search_text, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
         rusqlite::params![
             codigo, codigo_tipo, producto.nombre, producto.descripcion, producto.categoria_id,
-            producto.precio_costo, producto.precio_venta,
-            producto.stock_actual, producto.stock_minimo, producto.proveedor_id,
+            unidad, producto.precio_costo, producto.precio_venta,
+            producto.precio_mayoreo, producto.precio_por_caja, producto.kg_por_caja,
+            producto.stock_actual, producto.stock_minimo, es_temporada,
+            producto.emoji, producto.color_boton,
             producto.foto_url, search_text, now, now
         ],
     ).map_err(|e| e.to_string())?;
@@ -294,12 +309,17 @@ pub fn crear_producto(
         descripcion: producto.descripcion,
         categoria_id: producto.categoria_id,
         categoria_nombre: None,
+        unidad,
         precio_costo: producto.precio_costo,
         precio_venta: producto.precio_venta,
+        precio_mayoreo: producto.precio_mayoreo,
+        precio_por_caja: producto.precio_por_caja,
+        kg_por_caja: producto.kg_por_caja,
         stock_actual: producto.stock_actual,
         stock_minimo: producto.stock_minimo,
-        proveedor_id: producto.proveedor_id,
-        proveedor_nombre: None,
+        es_temporada,
+        emoji: producto.emoji,
+        color_boton: producto.color_boton,
         foto_url: producto.foto_url,
         activo: true,
     })
@@ -333,21 +353,25 @@ pub fn actualizar_producto(
         producto.nombre,
         producto.descripcion.as_deref().unwrap_or("")
     ));
+    let unidad = producto.unidad.unwrap_or_else(|| "kg".to_string());
+    let es_temporada = producto.es_temporada.unwrap_or(false);
 
     let now = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
     db.execute(
         r#"UPDATE productos SET
-            codigo = ?, nombre = ?, descripcion = ?, categoria_id = ?,
-            precio_costo = ?, precio_venta = ?,
-            stock_minimo = ?, proveedor_id = ?, foto_url = ?,
-            search_text = ?, updated_at = ?
+            codigo = ?, nombre = ?, descripcion = ?, categoria_id = ?, unidad = ?,
+            precio_costo = ?, precio_venta = ?, precio_mayoreo = ?,
+            precio_por_caja = ?, kg_por_caja = ?,
+            stock_minimo = ?, es_temporada = ?, emoji = ?, color_boton = ?,
+            foto_url = ?, search_text = ?, updated_at = ?
            WHERE id = ?"#,
         rusqlite::params![
             producto.codigo, producto.nombre, producto.descripcion, producto.categoria_id,
-            producto.precio_costo, producto.precio_venta,
-            producto.stock_minimo, producto.proveedor_id, producto.foto_url,
-            search_text, now, producto.id
+            unidad, producto.precio_costo, producto.precio_venta, producto.precio_mayoreo,
+            producto.precio_por_caja, producto.kg_por_caja,
+            producto.stock_minimo, es_temporada, producto.emoji, producto.color_boton,
+            producto.foto_url, search_text, now, producto.id
         ],
     ).map_err(|e| e.to_string())?;
 
@@ -464,13 +488,6 @@ pub fn ajustar_stock(
         rusqlite::params![nuevo_stock, now, producto_id],
     ).map_err(|e| e.to_string())?;
 
-    // También sincronizar stock_sucursal (sucursal 1 = principal por default)
-    let _ = db.execute(
-        "UPDATE stock_sucursal SET stock_actual = ?, updated_at = ?
-         WHERE producto_id = ? AND sucursal_id = 1",
-        rusqlite::params![nuevo_stock, now, producto_id],
-    );
-
     let diff = nuevo_stock - stock_anterior;
     let signo = if diff >= 0.0 { "+" } else { "" };
     let json_ant = format!("{{\"stock_actual\":{}}}", stock_anterior);
@@ -561,12 +578,14 @@ pub fn listar_productos_stock_bajo(state: State<'_, AppState>) -> Vec<Producto> 
     let mut stmt = db.prepare(
         r#"
         SELECT p.id, p.codigo, p.codigo_tipo, p.nombre, p.descripcion,
-               p.categoria_id, c.nombre, p.precio_costo, p.precio_venta,
-               p.stock_actual, p.stock_minimo, p.proveedor_id, pr.nombre,
+               p.categoria_id, c.nombre, p.unidad,
+               p.precio_costo, p.precio_venta, p.precio_mayoreo,
+               p.precio_por_caja, p.kg_por_caja,
+               p.stock_actual, p.stock_minimo,
+               p.es_temporada, p.emoji, p.color_boton,
                p.foto_url, p.activo
         FROM productos p
         LEFT JOIN categorias c ON c.id = p.categoria_id
-        LEFT JOIN proveedores pr ON pr.id = p.proveedor_id
         WHERE p.activo = 1 AND p.stock_minimo > 0 AND p.stock_actual <= p.stock_minimo
         ORDER BY (p.stock_actual / NULLIF(p.stock_minimo, 0)) ASC, p.nombre ASC
         "#,
@@ -577,10 +596,14 @@ pub fn listar_productos_stock_bajo(state: State<'_, AppState>) -> Vec<Producto> 
             id: row.get(0)?, codigo: row.get(1)?, codigo_tipo: row.get(2)?,
             nombre: row.get(3)?, descripcion: row.get(4)?,
             categoria_id: row.get(5)?, categoria_nombre: row.get(6)?,
-            precio_costo: row.get(7)?, precio_venta: row.get(8)?,
-            stock_actual: row.get(9)?, stock_minimo: row.get(10)?,
-            proveedor_id: row.get(11)?, proveedor_nombre: row.get(12)?,
-            foto_url: row.get(13)?, activo: row.get(14)?,
+            unidad: row.get(7)?,
+            precio_costo: row.get(8)?, precio_venta: row.get(9)?,
+            precio_mayoreo: row.get(10)?, precio_por_caja: row.get(11)?,
+            kg_por_caja: row.get(12)?,
+            stock_actual: row.get(13)?, stock_minimo: row.get(14)?,
+            es_temporada: row.get(15)?, emoji: row.get(16)?,
+            color_boton: row.get(17)?,
+            foto_url: row.get(18)?, activo: row.get(19)?,
         })
     }).unwrap()
     .filter_map(|r| r.ok())
@@ -607,28 +630,22 @@ pub fn listar_categorias(state: State<'_, AppState>) -> Vec<Categoria> {
     .collect()
 }
 
-// ─── Comandos de Proveedores ──────────────────────────────
+// ─── Proveedores (stub — no hay catálogo de proveedores en futería) ────
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Proveedor {
+    pub id: i64,
+    pub nombre: String,
+    pub contacto: Option<String>,
+    pub telefono: Option<String>,
+    pub email: Option<String>,
+    pub notas: Option<String>,
+    pub activo: bool,
+}
 
 #[tauri::command]
-pub fn listar_proveedores(state: State<'_, AppState>) -> Vec<Proveedor> {
-    let db = state.db.lock().unwrap();
-    let mut stmt = db.prepare(
-        "SELECT id, nombre, contacto, telefono, email, notas, activo FROM proveedores ORDER BY nombre"
-    ).unwrap();
-
-    stmt.query_map([], |row| {
-        Ok(Proveedor {
-            id: row.get(0)?,
-            nombre: row.get(1)?,
-            contacto: row.get(2)?,
-            telefono: row.get(3)?,
-            email: row.get(4)?,
-            notas: row.get(5)?,
-            activo: row.get::<_, i64>(6)? != 0,
-        })
-    }).unwrap()
-    .filter_map(|r| r.ok())
-    .collect()
+pub fn listar_proveedores(_state: State<'_, AppState>) -> Vec<Proveedor> {
+    vec![]  // No aplica en futería
 }
 
 // ─── Comandos de Clientes ─────────────────────────────────
@@ -764,7 +781,7 @@ pub fn obtener_config_negocio(state: State<'_, AppState>) -> ConfigNegocio {
             impresora_termica: row.get(7)?,
         }),
     ).unwrap_or(ConfigNegocio {
-        nombre: "Moto Refaccionaria".into(),
+        nombre: "Paulín Premium Fruits".into(),
         direccion: String::new(),
         telefono: String::new(),
         rfc: String::new(),

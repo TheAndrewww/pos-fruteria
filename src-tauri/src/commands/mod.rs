@@ -12,3 +12,5 @@ pub mod importar;
 pub mod conexion;
 pub mod sync_remoto;
 pub mod exportar;
+pub mod merma;
+pub mod entradas;

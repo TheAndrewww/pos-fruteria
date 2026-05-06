@@ -50,6 +50,8 @@ use commands::sync_remoto::{
     backfill_outbox,
 };
 use commands::exportar::escribir_archivo;
+use commands::merma::{registrar_merma, listar_mermas, reporte_merma};
+use commands::entradas::{registrar_entrada, listar_entradas};
 use db::connection::init_database;
 use std::sync::{Arc, Mutex};
 use tauri::Manager;
@@ -224,6 +226,13 @@ pub fn run() {
             desactivar_sync,
             probar_conexion_sync,
             backfill_outbox,
+            // Merma
+            registrar_merma,
+            listar_mermas,
+            reporte_merma,
+            // Entradas de mercancía
+            registrar_entrada,
+            listar_entradas,
         ])
         .run(tauri::generate_context!())
         .expect("Error al iniciar el POS");
