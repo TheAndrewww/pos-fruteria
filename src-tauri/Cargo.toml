@@ -1,12 +1,12 @@
 [package]
-name = "pos"
-version = "0.1.24"
-description = "POS Moto Refaccionaria"
-authors = ["Moto Refaccionaria"]
+name = "pos-fruteria"
+version = "0.1.0"
+description = "POS Paulín Premium Fruits"
+authors = ["Paulín Premium Fruits"]
 edition = "2021"
 
 [lib]
-name = "pos_lib"
+name = "pos_fruteria_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

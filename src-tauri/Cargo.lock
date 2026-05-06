@@ -3380,8 +3380,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "pos"
-version = "0.1.14"
+name = "pos-fruteria"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",

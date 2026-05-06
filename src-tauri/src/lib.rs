@@ -1,4 +1,4 @@
-// lib.rs — Entry point de Tauri para POS Moto Refaccionaria
+// lib.rs — Entry point de Tauri para POS Paulín Premium Fruits
 
 mod db;
 mod commands;
@@ -27,17 +27,6 @@ use commands::usuarios::{
     listar_usuarios, listar_roles, crear_usuario, actualizar_usuario, toggle_usuario_activo,
 };
 use commands::bitacora::listar_bitacora;
-use commands::presupuestos::{
-    crear_presupuesto, listar_presupuestos,
-    obtener_detalle_presupuesto, cambiar_estado_presupuesto,
-};
-use commands::recepcion::{
-    crear_recepcion, listar_recepciones, obtener_detalle_recepcion,
-};
-use commands::pedidos::{
-    crear_orden_pedido, listar_ordenes_pedido,
-    obtener_detalle_orden, cambiar_estado_orden,
-};
 use commands::cortes::{
     crear_movimiento_caja, listar_movimientos_sin_corte,
     calcular_datos_corte, crear_corte,
@@ -86,22 +75,18 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .setup(|app| {
-            // Obtener el directorio de datos de la app (multiplataforma)
             let app_data_dir = app.path().app_data_dir()
                 .expect("No se pudo obtener el directorio de datos de la app");
-
-            // Crear el directorio si no existe
             std::fs::create_dir_all(&app_data_dir)
                 .expect("No se pudo crear el directorio de datos");
 
-            let db_path = app_data_dir.join("pos_database.db");
+            let db_path = app_data_dir.join("pos_fruteria.db");
             log::info!("Inicializando BD en: {:?}", db_path);
 
-            // Inicializar la base de datos
             let conn = init_database(&db_path)
                 .expect("Error al inicializar la base de datos");
 
-            // Respaldo automático de arranque (si está activado en config)
+            // Respaldo automático de arranque
             let app_handle = app.handle().clone();
             if let Ok(backup_dir) = commands::respaldos::obtener_backups_dir(&app_handle) {
                 if let Err(e) = commands::respaldos::respaldo_auto_startup(&app_handle, &conn, &backup_dir) {
@@ -109,14 +94,10 @@ pub fn run() {
                 }
             }
 
-            // Envolver la conexión en Arc<Mutex<>> para compartir con el servidor LAN
             let db_arc = Arc::new(Mutex::new(conn));
-
-            // Compartir el estado con todos los comandos Tauri
             app.manage(AppState { db: db_arc.clone() });
 
-            // ========== Servidor LAN (Fase 3.1) ==========
-            // JWT secret persistente (archivo dedicado en app_data_dir)
+            // ========== Servidor LAN ==========
             let secret_path = app_data_dir.join("jwt.secret");
             let jwt_secret: Vec<u8> = if secret_path.exists() {
                 std::fs::read(&secret_path).unwrap_or_else(|_| gen_secret())
@@ -127,15 +108,13 @@ pub fn run() {
             };
             let cert_dir = app_data_dir.join("certs");
             let pwa_dist_dir = {
-                // Los archivos de la PWA se embeben en resources/
                 app.path().resolve("resources/mobile-dist", tauri::path::BaseDirectory::Resource).ok()
             };
 
-            // Slot para el ServerState (se rellena cuando el servidor termina de arrancar)
             let server_slot: ServerSlot = Arc::new(std::sync::RwLock::new(None));
             app.manage(server_slot.clone());
 
-            // ========== Worker de sync remoto (Fase 3.2) ==========
+            // ========== Worker de sync remoto ==========
             sync::worker::arrancar(db_arc.clone());
 
             let db_for_server = db_arc.clone();
@@ -179,7 +158,7 @@ pub fn run() {
             historial_precios_producto,
             listar_categorias,
             listar_proveedores,
-            // Clientes
+            // Clientes (simplificado — sin CRUD de clientes dedicado)
             listar_clientes,
             crear_cliente,
             actualizar_cliente,
@@ -207,20 +186,6 @@ pub fn run() {
             toggle_usuario_activo,
             // Bitácora
             listar_bitacora,
-            // Presupuestos
-            crear_presupuesto,
-            listar_presupuestos,
-            obtener_detalle_presupuesto,
-            cambiar_estado_presupuesto,
-            // Recepción
-            crear_recepcion,
-            listar_recepciones,
-            obtener_detalle_recepcion,
-            // Pedidos
-            crear_orden_pedido,
-            listar_ordenes_pedido,
-            obtener_detalle_orden,
-            cambiar_estado_orden,
             // Cortes de caja
             crear_movimiento_caja,
             listar_movimientos_sin_corte,
@@ -248,12 +213,12 @@ pub fn run() {
             importar_catalogo_csv,
             // Exportación
             escribir_archivo,
-            // Conexión móvil (Fase 3.1)
+            // Conexión móvil
             obtener_info_servidor,
             generar_qr_emparejamiento,
             listar_dispositivos,
             revocar_dispositivo,
-            // Sync remoto (Fase 3.2)
+            // Sync remoto
             obtener_estado_sync,
             configurar_sync,
             desactivar_sync,

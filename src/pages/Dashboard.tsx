@@ -1,4 +1,4 @@
-// pages/Dashboard.tsx — Layout principal del POS (post-login)
+// pages/Dashboard.tsx — Layout principal del POS Paulín Premium Fruits
 // Navegación lateral + contenido dinámico
 
 import { useState, useEffect } from 'react';
@@ -8,25 +8,18 @@ import ModalModoCaja from '../components/ModalModoCaja';
 import PuntoDeVenta from './PuntoDeVenta';
 import Catalogo from './Catalogo';
 import UsuariosPage from './Usuarios';
-import ClientesPage from './Clientes';
-import Bitacora from './Bitacora';
-import Presupuestos from './Presupuestos';
-import RecepcionPage from './Recepcion';
-import PedidosPage from './Pedidos';
-import EtiquetasPage from './Etiquetas';
 import CortesCaja, { ModalAperturaCaja } from './CortesCaja';
 import HistorialVentas from './HistorialVentas';
 import Reportes from './Reportes';
 import Ajustes from './Ajustes';
-import Sincronizacion from './Sincronizacion';
 import { useCortesStore } from '../store/cortesStore';
 import {
-  ShoppingCart, Package, BarChart3, LogOut, ClipboardList,
-  TruckIcon, Tag, Users, ScrollText, DollarSign, History, Settings, UserPlus, TrendingUp,
-  Menu, X, Cloud,
+  ShoppingCart, Package, BarChart3, LogOut,
+  Users, DollarSign, History, Settings, TrendingUp,
+  Menu, X,
 } from 'lucide-react';
 
-type Modulo = 'venta' | 'catalogo' | 'dashboard' | 'presupuestos' | 'recepcion' | 'pedidos' | 'etiquetas' | 'bitacora' | 'usuarios' | 'clientes' | 'cortes' | 'historial' | 'reportes' | 'ajustes' | 'sincronizacion';
+type Modulo = 'venta' | 'catalogo' | 'dashboard' | 'usuarios' | 'cortes' | 'historial' | 'reportes' | 'ajustes';
 
 interface EstadisticasDia {
   total_ventas: number;
@@ -137,20 +130,13 @@ export default function Dashboard() {
 
   // Menú lateral
   const menuItems: { id: Modulo; label: string; icon: React.ReactNode; key: string; visible: boolean }[] = [
-    { id: 'venta', label: 'Venta Rápida', icon: <ShoppingCart size={18} />, key: 'F1', visible: tienePermiso('ventas', 'crear') },
-    { id: 'catalogo', label: 'Inventario', icon: <Package size={18} />, key: 'F4', visible: tienePermiso('inventario', 'ver') },
+    { id: 'venta', label: 'Punto de Venta', icon: <ShoppingCart size={18} />, key: 'F1', visible: tienePermiso('ventas', 'crear') },
+    { id: 'catalogo', label: 'Productos', icon: <Package size={18} />, key: 'F4', visible: tienePermiso('inventario', 'ver') },
     { id: 'dashboard', label: 'Dashboard', icon: <BarChart3 size={18} />, key: 'F8', visible: true },
-    { id: 'presupuestos', label: 'Presupuestos', icon: <ClipboardList size={18} />, key: 'F2', visible: tienePermiso('ventas', 'crear') },
-    { id: 'recepcion', label: 'Recepción', icon: <TruckIcon size={18} />, key: 'F3', visible: tienePermiso('inventario', 'crear') },
-    { id: 'pedidos', label: 'Pedidos', icon: <ScrollText size={18} />, key: '', visible: tienePermiso('pedidos', 'ver') },
-    { id: 'etiquetas', label: 'Etiquetas', icon: <Tag size={18} />, key: 'F5', visible: tienePermiso('inventario', 'ver') },
     { id: 'historial', label: 'Historial Ventas', icon: <History size={18} />, key: 'F7', visible: tienePermiso('ventas', 'ver') },
-    { id: 'bitacora', label: 'Bitácora', icon: <ScrollText size={18} />, key: 'F9', visible: esAdmin },
-    { id: 'clientes', label: 'Clientes', icon: <UserPlus size={18} />, key: '', visible: tienePermiso('ventas', 'crear') },
-    { id: 'usuarios', label: 'Usuarios', icon: <Users size={18} />, key: '', visible: esAdmin },
     { id: 'cortes', label: 'Cortes de Caja', icon: <DollarSign size={18} />, key: 'F11', visible: true },
     { id: 'reportes', label: 'Reportes', icon: <TrendingUp size={18} />, key: 'F10', visible: esAdmin },
-    { id: 'sincronizacion', label: 'Sincronización', icon: <Cloud size={18} />, key: '', visible: esAdmin },
+    { id: 'usuarios', label: 'Usuarios', icon: <Users size={18} />, key: '', visible: esAdmin },
     { id: 'ajustes', label: 'Ajustes', icon: <Settings size={18} />, key: '', visible: esAdmin },
   ];
 
@@ -190,9 +176,9 @@ export default function Dashboard() {
           >
             {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
-          <img src="/logo.png" alt="LB" style={{ height: 30, width: 'auto' }} draggable={false} />
+          <span style={{ fontSize: 22 }}>🍊</span>
           <span className="pos-topbar-title" style={{ fontWeight: 700, fontSize: 14, color: 'var(--color-text)' }}>
-            MOTO REFACCIONARIA LB
+            PAULÍN PREMIUM FRUITS
           </span>
         </div>
 
@@ -362,25 +348,15 @@ export default function Dashboard() {
         <div style={{ display: modulo === 'venta' ? 'flex' : 'none', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
           <PuntoDeVenta />
         </div>
-        <div style={{ display: modulo === 'recepcion' ? 'flex' : 'none', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-          <RecepcionPage />
-        </div>
-        <div style={{ display: modulo === 'presupuestos' ? 'flex' : 'none', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-          <Presupuestos onIrAVenta={() => setModulo('venta')} />
-        </div>
         <div style={{ display: modulo === 'catalogo' ? 'flex' : 'none', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
           <Catalogo />
         </div>
 
         {/* Módulos sin persistencia necesaria (renderizado condicional normal) */}
         {modulo === 'usuarios' && <UsuariosPage />}
-        {modulo === 'clientes' && <ClientesPage />}
         {modulo === 'dashboard' && (
           <DashboardHome stats={stats} fmt={fmt} stockBajo={stockBajoCount} onVerInventario={() => setModulo('catalogo')} />
         )}
-        {modulo === 'bitacora' && <Bitacora />}
-        {modulo === 'pedidos' && <PedidosPage />}
-        {modulo === 'etiquetas' && <EtiquetasPage />}
         {modulo === 'historial' && <HistorialVentas />}
         {modulo === 'reportes' && <Reportes />}
         <div style={{ display: modulo === 'cortes' ? 'flex' : 'none', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
@@ -393,7 +369,6 @@ export default function Dashboard() {
           />
         </div>
         {modulo === 'ajustes' && <Ajustes />}
-        {modulo === 'sincronizacion' && <Sincronizacion />}
       </div>
     </div>
     </>
