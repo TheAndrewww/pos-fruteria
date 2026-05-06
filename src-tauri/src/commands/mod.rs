@@ -1,0 +1,17 @@
+pub mod auth;
+pub mod productos;
+pub mod ventas;
+pub mod usuarios;
+pub mod bitacora;
+pub mod presupuestos;
+pub mod recepcion;
+pub mod pedidos;
+pub mod cortes;
+pub mod devoluciones;
+pub mod respaldos;
+pub mod print;
+pub mod print_termico;
+pub mod importar;
+pub mod conexion;
+pub mod sync_remoto;
+pub mod exportar;

@@ -1,0 +1,796 @@
+// commands/productos.rs — CRUD de productos y generación de códigos internos
+
+use serde::{Deserialize, Serialize};
+use tauri::State;
+use super::auth::AppState;
+use chrono::Utc;
+
+// ─── Structs ──────────────────────────────────────────────
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Producto {
+    pub id: i64,
+    pub codigo: String,
+    pub codigo_tipo: String,
+    pub nombre: String,
+    pub descripcion: Option<String>,
+    pub categoria_id: Option<i64>,
+    pub categoria_nombre: Option<String>,
+    pub precio_costo: f64,
+    pub precio_venta: f64,
+    pub stock_actual: f64,
+    pub stock_minimo: f64,
+    pub proveedor_id: Option<i64>,
+    pub proveedor_nombre: Option<String>,
+    pub foto_url: Option<String>,
+    pub activo: bool,
+}
+
+#[derive(Deserialize)]
+pub struct NuevoProducto {
+    pub codigo: Option<String>,
+    pub codigo_tipo: Option<String>,
+    pub nombre: String,
+    pub descripcion: Option<String>,
+    pub categoria_id: Option<i64>,
+    pub precio_costo: f64,
+    pub precio_venta: f64,
+    pub stock_actual: f64,
+    pub stock_minimo: f64,
+    pub proveedor_id: Option<i64>,
+    pub foto_url: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct ActualizarProducto {
+    pub id: i64,
+    pub codigo: String,
+    pub nombre: String,
+    pub descripcion: Option<String>,
+    pub categoria_id: Option<i64>,
+    pub precio_costo: f64,
+    pub precio_venta: f64,
+    pub stock_minimo: f64,
+    pub proveedor_id: Option<i64>,
+    pub foto_url: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Categoria {
+    pub id: i64,
+    pub nombre: String,
+    pub descripcion: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Proveedor {
+    pub id: i64,
+    pub nombre: String,
+    pub contacto: Option<String>,
+    pub telefono: Option<String>,
+    pub email: Option<String>,
+    pub notas: Option<String>,
+    pub activo: bool,
+}
+
+#[derive(Deserialize)]
+pub struct ActualizarProveedor {
+    pub id: i64,
+    pub nombre: String,
+    pub contacto: Option<String>,
+    pub telefono: Option<String>,
+    pub email: Option<String>,
+    pub notas: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Cliente {
+    pub id: i64,
+    pub nombre: String,
+    pub telefono: Option<String>,
+    pub email: Option<String>,
+    pub descuento_porcentaje: f64,
+    pub notas: Option<String>,
+    pub activo: bool,
+}
+
+#[derive(Deserialize)]
+pub struct ActualizarCliente {
+    pub id: i64,
+    pub nombre: String,
+    pub telefono: Option<String>,
+    pub email: Option<String>,
+    pub descuento_porcentaje: f64,
+    pub notas: Option<String>,
+}
+
+// ─── Helpers ──────────────────────────────────────────────
+
+pub fn normalizar_texto(texto: &str) -> String {
+    texto
+        .to_lowercase()
+        .replace('á', "a")
+        .replace('é', "e")
+        .replace('í', "i")
+        .replace('ó', "o")
+        .replace('ú', "u")
+        .replace('ñ', "n")
+        .replace('ü', "u")
+}
+
+// ─── Comandos de Productos ────────────────────────────────
+
+/// Listar todos los productos activos
+#[tauri::command]
+pub fn listar_productos(state: State<'_, AppState>) -> Vec<Producto> {
+    let db = state.db.lock().unwrap();
+    let mut stmt = db.prepare(
+        r#"
+        SELECT p.id, p.codigo, p.codigo_tipo, p.nombre, p.descripcion,
+               p.categoria_id, c.nombre, p.precio_costo, p.precio_venta,
+               p.stock_actual, p.stock_minimo, p.proveedor_id, pr.nombre,
+               p.foto_url, p.activo
+        FROM productos p
+        LEFT JOIN categorias c ON c.id = p.categoria_id
+        LEFT JOIN proveedores pr ON pr.id = p.proveedor_id
+        WHERE p.activo = 1
+        ORDER BY p.nombre ASC
+        "#,
+    ).unwrap();
+
+    stmt.query_map([], |row| {
+        Ok(Producto {
+            id: row.get(0)?,
+            codigo: row.get(1)?,
+            codigo_tipo: row.get(2)?,
+            nombre: row.get(3)?,
+            descripcion: row.get(4)?,
+            categoria_id: row.get(5)?,
+            categoria_nombre: row.get(6)?,
+            precio_costo: row.get(7)?,
+            precio_venta: row.get(8)?,
+            stock_actual: row.get(9)?,
+            stock_minimo: row.get(10)?,
+            proveedor_id: row.get(11)?,
+            proveedor_nombre: row.get(12)?,
+            foto_url: row.get(13)?,
+            activo: row.get(14)?,
+        })
+    }).unwrap()
+    .filter_map(|r| r.ok())
+    .collect()
+}
+
+/// Obtener producto por código (para escaneo)
+#[tauri::command]
+pub fn obtener_producto_por_codigo(
+    codigo: String,
+    state: State<'_, AppState>,
+) -> Option<Producto> {
+    let db = state.db.lock().unwrap();
+    db.query_row(
+        r#"
+        SELECT p.id, p.codigo, p.codigo_tipo, p.nombre, p.descripcion,
+               p.categoria_id, c.nombre, p.precio_costo, p.precio_venta,
+               p.stock_actual, p.stock_minimo, p.proveedor_id, pr.nombre,
+               p.foto_url, p.activo
+        FROM productos p
+        LEFT JOIN categorias c ON c.id = p.categoria_id
+        LEFT JOIN proveedores pr ON pr.id = p.proveedor_id
+        WHERE p.codigo = ? AND p.activo = 1
+        "#,
+        rusqlite::params![codigo],
+        |row| {
+            Ok(Producto {
+                id: row.get(0)?,
+                codigo: row.get(1)?,
+                codigo_tipo: row.get(2)?,
+                nombre: row.get(3)?,
+                descripcion: row.get(4)?,
+                categoria_id: row.get(5)?,
+                categoria_nombre: row.get(6)?,
+                precio_costo: row.get(7)?,
+                precio_venta: row.get(8)?,
+                stock_actual: row.get(9)?,
+                stock_minimo: row.get(10)?,
+                proveedor_id: row.get(11)?,
+                proveedor_nombre: row.get(12)?,
+                foto_url: row.get(13)?,
+                activo: row.get(14)?,
+            })
+        },
+    ).ok()
+}
+
+/// Generar código interno MR-XXXXX
+#[tauri::command]
+pub fn generar_codigo_interno(state: State<'_, AppState>) -> Result<String, String> {
+    let db = state.db.lock().unwrap();
+
+    // Obtener el último valor de la secuencia y avanzar
+    let ultimo: i64 = db.query_row(
+        "SELECT ultimo_valor FROM codigo_secuencia WHERE id = 1",
+        [],
+        |row| row.get(0),
+    ).map_err(|e| e.to_string())?;
+
+    let nuevo = ultimo + 1;
+    db.execute(
+        "UPDATE codigo_secuencia SET ultimo_valor = ? WHERE id = 1",
+        rusqlite::params![nuevo],
+    ).map_err(|e| e.to_string())?;
+
+    Ok(format!("MR-{:05}", nuevo))
+}
+
+/// Crear un nuevo producto
+#[tauri::command]
+pub fn crear_producto(
+    producto: NuevoProducto,
+    usuario_id: i64,
+    state: State<'_, AppState>,
+) -> Result<Producto, String> {
+    let db = state.db.lock().unwrap();
+
+    // Generar código si no se proporcionó
+    let codigo = match producto.codigo {
+        Some(c) if !c.is_empty() => c,
+        _ => {
+            let ultimo: i64 = db.query_row(
+                "SELECT ultimo_valor FROM codigo_secuencia WHERE id = 1",
+                [], |row| row.get(0),
+            ).map_err(|e| e.to_string())?;
+            let nuevo = ultimo + 1;
+            db.execute(
+                "UPDATE codigo_secuencia SET ultimo_valor = ? WHERE id = 1",
+                rusqlite::params![nuevo],
+            ).map_err(|e| e.to_string())?;
+            format!("MR-{:05}", nuevo)
+        }
+    };
+
+    let codigo_tipo = producto.codigo_tipo.unwrap_or_else(|| "INTERNO".to_string());
+    let search_text = normalizar_texto(&format!("{} {} {}",
+        codigo,
+        producto.nombre,
+        producto.descripcion.as_deref().unwrap_or("")
+    ));
+
+    let now = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+
+    db.execute(
+        r#"INSERT INTO productos
+           (codigo, codigo_tipo, nombre, descripcion, categoria_id,
+            precio_costo, precio_venta,
+            stock_actual, stock_minimo, proveedor_id, foto_url, search_text,
+            created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
+        rusqlite::params![
+            codigo, codigo_tipo, producto.nombre, producto.descripcion, producto.categoria_id,
+            producto.precio_costo, producto.precio_venta,
+            producto.stock_actual, producto.stock_minimo, producto.proveedor_id,
+            producto.foto_url, search_text, now, now
+        ],
+    ).map_err(|e| e.to_string())?;
+
+    let id = db.last_insert_rowid();
+
+    // Bitácora
+    let _ = db.execute(
+        r#"INSERT INTO audit_log (usuario_id, accion, tabla_afectada, registro_id, descripcion_legible, origen)
+           VALUES (?, 'PRODUCTO_CREADO', 'productos', ?, ?, 'POS')"#,
+        rusqlite::params![
+            usuario_id, id,
+            format!("Producto creado: {} ({})", producto.nombre, codigo)
+        ],
+    );
+
+    // Devolver el producto completo
+    Ok(Producto {
+        id,
+        codigo,
+        codigo_tipo,
+        nombre: producto.nombre,
+        descripcion: producto.descripcion,
+        categoria_id: producto.categoria_id,
+        categoria_nombre: None,
+        precio_costo: producto.precio_costo,
+        precio_venta: producto.precio_venta,
+        stock_actual: producto.stock_actual,
+        stock_minimo: producto.stock_minimo,
+        proveedor_id: producto.proveedor_id,
+        proveedor_nombre: None,
+        foto_url: producto.foto_url,
+        activo: true,
+    })
+}
+
+/// Actualizar un producto existente
+#[tauri::command]
+pub fn actualizar_producto(
+    producto: ActualizarProducto,
+    usuario_id: i64,
+    state: State<'_, AppState>,
+) -> Result<bool, String> {
+    let db = state.db.lock().unwrap();
+
+    // Obtener precio anterior para detectar cambios
+    let precio_anterior: f64 = db.query_row(
+        "SELECT precio_venta FROM productos WHERE id = ?",
+        rusqlite::params![producto.id],
+        |row| row.get(0),
+    ).unwrap_or(0.0);
+
+    // Obtener datos anteriores para bitácora
+    let datos_ant: Option<String> = db.query_row(
+        "SELECT nombre || ' | costo:' || precio_costo || ' | venta:' || precio_venta FROM productos WHERE id = ?",
+        rusqlite::params![producto.id],
+        |row| row.get(0),
+    ).ok();
+
+    let search_text = normalizar_texto(&format!("{} {} {}",
+        producto.codigo,
+        producto.nombre,
+        producto.descripcion.as_deref().unwrap_or("")
+    ));
+
+    let now = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+
+    db.execute(
+        r#"UPDATE productos SET
+            codigo = ?, nombre = ?, descripcion = ?, categoria_id = ?,
+            precio_costo = ?, precio_venta = ?,
+            stock_minimo = ?, proveedor_id = ?, foto_url = ?,
+            search_text = ?, updated_at = ?
+           WHERE id = ?"#,
+        rusqlite::params![
+            producto.codigo, producto.nombre, producto.descripcion, producto.categoria_id,
+            producto.precio_costo, producto.precio_venta,
+            producto.stock_minimo, producto.proveedor_id, producto.foto_url,
+            search_text, now, producto.id
+        ],
+    ).map_err(|e| e.to_string())?;
+
+    // Bitácora
+    let _ = db.execute(
+        r#"INSERT INTO audit_log (usuario_id, accion, tabla_afectada, registro_id,
+           datos_anteriores, descripcion_legible, origen)
+           VALUES (?, 'PRODUCTO_EDITADO', 'productos', ?, ?, ?, 'POS')"#,
+        rusqlite::params![
+            usuario_id, producto.id,
+            datos_ant.unwrap_or_default(),
+            format!("Producto editado: {}", producto.nombre)
+        ],
+    );
+
+    // Log dedicado de cambio de precio (para historial_precios_producto)
+    if (producto.precio_venta - precio_anterior).abs() > 0.001 {
+        let json_ant = format!("{{\"precio_venta\":{:.2}}}", precio_anterior);
+        let json_new = format!("{{\"precio_venta\":{:.2}}}", producto.precio_venta);
+        let _ = db.execute(
+            r#"INSERT INTO audit_log (usuario_id, accion, tabla_afectada, registro_id,
+               datos_anteriores, datos_nuevos, descripcion_legible, origen)
+               VALUES (?, 'PRECIO_ACTUALIZADO', 'productos', ?, ?, ?, ?, 'POS')"#,
+            rusqlite::params![
+                usuario_id, producto.id, json_ant, json_new,
+                format!("Precio de '{}' cambió de ${:.2} a ${:.2}",
+                    producto.nombre, precio_anterior, producto.precio_venta)
+            ],
+        );
+    }
+
+    Ok(true)
+}
+
+/// Eliminar producto (soft delete).
+///
+/// No hace DELETE físico para no romper integridad con ventas anteriores
+/// (venta_detalle.producto_id → productos.id). En su lugar:
+///   - `activo = 0` → desaparece de listados y de búsqueda en el POS
+///   - `deleted_at = datetime('now')` → marca tombstone para sync remoto
+///   - `updated_at` se bumpea automáticamente vía trigger
+///
+/// El registro queda en la BD para mantener consistencia histórica.
+#[tauri::command]
+pub fn eliminar_producto(
+    producto_id: i64,
+    usuario_id: i64,
+    state: State<'_, AppState>,
+) -> Result<bool, String> {
+    let db = state.db.lock().unwrap();
+
+    // Capturar nombre para bitácora antes de marcar como eliminado
+    let nombre: String = db.query_row(
+        "SELECT nombre FROM productos WHERE id = ?",
+        rusqlite::params![producto_id],
+        |row| row.get(0),
+    ).map_err(|e| format!("Producto no encontrado: {}", e))?;
+
+    let now = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+
+    let n = db.execute(
+        "UPDATE productos SET activo = 0, deleted_at = ?, updated_at = ? WHERE id = ?",
+        rusqlite::params![now, now, producto_id],
+    ).map_err(|e| e.to_string())?;
+
+    if n == 0 {
+        return Err("Producto no encontrado".to_string());
+    }
+
+    // Bitácora
+    let _ = db.execute(
+        r#"INSERT INTO audit_log (usuario_id, accion, tabla_afectada, registro_id, descripcion_legible, origen)
+           VALUES (?, 'PRODUCTO_ELIMINADO', 'productos', ?, ?, 'POS')"#,
+        rusqlite::params![
+            usuario_id, producto_id,
+            format!("Producto eliminado: {}", nombre)
+        ],
+    );
+
+    Ok(true)
+}
+
+/// Ajustar stock de un producto (entrada/salida manual).
+///
+/// Sirve para correcciones de inventario, mermas, ajustes físicos. NO usar
+/// para ventas o recepciones, que tienen sus propios comandos.
+///
+/// Registra en bitácora con datos viejos→nuevos para que pueda auditarse el
+/// movimiento (quién, cuándo, qué cantidad y por qué motivo).
+#[tauri::command]
+pub fn ajustar_stock(
+    producto_id: i64,
+    nuevo_stock: f64,
+    motivo: String,
+    usuario_id: i64,
+    state: State<'_, AppState>,
+) -> Result<bool, String> {
+    if motivo.trim().is_empty() {
+        return Err("El motivo es obligatorio".to_string());
+    }
+
+    let db = state.db.lock().unwrap();
+
+    let (nombre, stock_anterior): (String, f64) = db.query_row(
+        "SELECT nombre, stock_actual FROM productos WHERE id = ?",
+        rusqlite::params![producto_id],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    ).map_err(|e| format!("Producto no encontrado: {}", e))?;
+
+    let now = Utc::now().format("%Y-%m-%d %H:%M:%S").to_string();
+
+    db.execute(
+        "UPDATE productos SET stock_actual = ?, updated_at = ? WHERE id = ?",
+        rusqlite::params![nuevo_stock, now, producto_id],
+    ).map_err(|e| e.to_string())?;
+
+    // También sincronizar stock_sucursal (sucursal 1 = principal por default)
+    let _ = db.execute(
+        "UPDATE stock_sucursal SET stock_actual = ?, updated_at = ?
+         WHERE producto_id = ? AND sucursal_id = 1",
+        rusqlite::params![nuevo_stock, now, producto_id],
+    );
+
+    let diff = nuevo_stock - stock_anterior;
+    let signo = if diff >= 0.0 { "+" } else { "" };
+    let json_ant = format!("{{\"stock_actual\":{}}}", stock_anterior);
+    let json_new = format!("{{\"stock_actual\":{},\"motivo\":\"{}\"}}",
+        nuevo_stock, motivo.replace('"', "\\\""));
+
+    let _ = db.execute(
+        r#"INSERT INTO audit_log (usuario_id, accion, tabla_afectada, registro_id,
+           datos_anteriores, datos_nuevos, descripcion_legible, origen)
+           VALUES (?, 'STOCK_AJUSTADO', 'productos', ?, ?, ?, ?, 'POS')"#,
+        rusqlite::params![
+            usuario_id, producto_id, json_ant, json_new,
+            format!("Stock ajustado: {} ({}{}) — {}",
+                nombre, signo, diff, motivo.trim())
+        ],
+    );
+
+    Ok(true)
+}
+
+// ─── Historial de precios ─────────────────────────────────
+
+#[derive(Serialize, Debug)]
+pub struct HistorialPrecio {
+    pub fecha: String,
+    pub precio_anterior: f64,
+    pub precio_nuevo: f64,
+    pub usuario_nombre: String,
+}
+
+/// Lista los cambios de precio de un producto (descendente por fecha).
+#[tauri::command]
+pub fn historial_precios_producto(
+    producto_id: i64,
+    state: State<'_, AppState>,
+) -> Result<Vec<HistorialPrecio>, String> {
+    let db = state.db.lock().unwrap();
+    let mut stmt = db.prepare(
+        r#"SELECT a.fecha, a.datos_anteriores, a.datos_nuevos,
+                  COALESCE(u.nombre_completo, 'Desconocido')
+           FROM audit_log a
+           LEFT JOIN usuarios u ON u.id = a.usuario_id
+           WHERE a.accion = 'PRECIO_ACTUALIZADO'
+             AND a.tabla_afectada = 'productos'
+             AND a.registro_id = ?
+           ORDER BY a.fecha DESC"#,
+    ).map_err(|e| e.to_string())?;
+
+    let rows = stmt.query_map(rusqlite::params![producto_id], |row| {
+        let fecha: String = row.get(0)?;
+        let ant: Option<String> = row.get(1)?;
+        let new_: Option<String> = row.get(2)?;
+        let usuario: String = row.get(3)?;
+        Ok((fecha, ant, new_, usuario))
+    }).map_err(|e| e.to_string())?;
+
+    let mut resultado = Vec::new();
+    for r in rows {
+        let (fecha, ant, new_, usuario) = r.map_err(|e| e.to_string())?;
+        let precio_anterior = extraer_precio(&ant.unwrap_or_default());
+        let precio_nuevo = extraer_precio(&new_.unwrap_or_default());
+        resultado.push(HistorialPrecio {
+            fecha,
+            precio_anterior,
+            precio_nuevo,
+            usuario_nombre: usuario,
+        });
+    }
+    Ok(resultado)
+}
+
+/// Parser simple de `{"precio_venta":12.50}` → 12.50
+fn extraer_precio(json: &str) -> f64 {
+    let key = "\"precio_venta\":";
+    if let Some(i) = json.find(key) {
+        let rest = &json[i + key.len()..];
+        let end = rest.find(|c: char| c == ',' || c == '}').unwrap_or(rest.len());
+        rest[..end].trim().parse::<f64>().unwrap_or(0.0)
+    } else {
+        0.0
+    }
+}
+
+/// Productos con stock ≤ stock_minimo (alerta de reorden)
+#[tauri::command]
+pub fn listar_productos_stock_bajo(state: State<'_, AppState>) -> Vec<Producto> {
+    let db = state.db.lock().unwrap();
+    let mut stmt = db.prepare(
+        r#"
+        SELECT p.id, p.codigo, p.codigo_tipo, p.nombre, p.descripcion,
+               p.categoria_id, c.nombre, p.precio_costo, p.precio_venta,
+               p.stock_actual, p.stock_minimo, p.proveedor_id, pr.nombre,
+               p.foto_url, p.activo
+        FROM productos p
+        LEFT JOIN categorias c ON c.id = p.categoria_id
+        LEFT JOIN proveedores pr ON pr.id = p.proveedor_id
+        WHERE p.activo = 1 AND p.stock_minimo > 0 AND p.stock_actual <= p.stock_minimo
+        ORDER BY (p.stock_actual / NULLIF(p.stock_minimo, 0)) ASC, p.nombre ASC
+        "#,
+    ).unwrap();
+
+    stmt.query_map([], |row| {
+        Ok(Producto {
+            id: row.get(0)?, codigo: row.get(1)?, codigo_tipo: row.get(2)?,
+            nombre: row.get(3)?, descripcion: row.get(4)?,
+            categoria_id: row.get(5)?, categoria_nombre: row.get(6)?,
+            precio_costo: row.get(7)?, precio_venta: row.get(8)?,
+            stock_actual: row.get(9)?, stock_minimo: row.get(10)?,
+            proveedor_id: row.get(11)?, proveedor_nombre: row.get(12)?,
+            foto_url: row.get(13)?, activo: row.get(14)?,
+        })
+    }).unwrap()
+    .filter_map(|r| r.ok())
+    .collect()
+}
+
+// ─── Comandos de Categorías ───────────────────────────────
+
+#[tauri::command]
+pub fn listar_categorias(state: State<'_, AppState>) -> Vec<Categoria> {
+    let db = state.db.lock().unwrap();
+    let mut stmt = db.prepare(
+        "SELECT id, nombre, descripcion FROM categorias ORDER BY nombre"
+    ).unwrap();
+
+    stmt.query_map([], |row| {
+        Ok(Categoria {
+            id: row.get(0)?,
+            nombre: row.get(1)?,
+            descripcion: row.get(2)?,
+        })
+    }).unwrap()
+    .filter_map(|r| r.ok())
+    .collect()
+}
+
+// ─── Comandos de Proveedores ──────────────────────────────
+
+#[tauri::command]
+pub fn listar_proveedores(state: State<'_, AppState>) -> Vec<Proveedor> {
+    let db = state.db.lock().unwrap();
+    let mut stmt = db.prepare(
+        "SELECT id, nombre, contacto, telefono, email, notas, activo FROM proveedores ORDER BY nombre"
+    ).unwrap();
+
+    stmt.query_map([], |row| {
+        Ok(Proveedor {
+            id: row.get(0)?,
+            nombre: row.get(1)?,
+            contacto: row.get(2)?,
+            telefono: row.get(3)?,
+            email: row.get(4)?,
+            notas: row.get(5)?,
+            activo: row.get::<_, i64>(6)? != 0,
+        })
+    }).unwrap()
+    .filter_map(|r| r.ok())
+    .collect()
+}
+
+// ─── Comandos de Clientes ─────────────────────────────────
+
+#[tauri::command]
+pub fn listar_clientes(state: State<'_, AppState>) -> Vec<Cliente> {
+    let db = state.db.lock().unwrap();
+    let mut stmt = db.prepare(
+        "SELECT id, nombre, telefono, email, descuento_porcentaje, notas, activo FROM clientes ORDER BY nombre"
+    ).unwrap();
+
+    stmt.query_map([], |row| {
+        Ok(Cliente {
+            id: row.get(0)?,
+            nombre: row.get(1)?,
+            telefono: row.get(2)?,
+            email: row.get(3)?,
+            descuento_porcentaje: row.get(4)?,
+            notas: row.get(5)?,
+            activo: row.get::<_, i64>(6)? != 0,
+        })
+    }).unwrap()
+    .filter_map(|r| r.ok())
+    .collect()
+}
+
+#[tauri::command]
+pub fn crear_cliente(
+    nombre: String,
+    telefono: Option<String>,
+    email: Option<String>,
+    descuento_porcentaje: f64,
+    notas: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<Cliente, String> {
+    let db = state.db.lock().unwrap();
+
+    db.execute(
+        "INSERT INTO clientes (nombre, telefono, email, descuento_porcentaje, notas, activo) VALUES (?, ?, ?, ?, ?, 1)",
+        rusqlite::params![nombre, telefono, email, descuento_porcentaje, notas],
+    ).map_err(|e| e.to_string())?;
+
+    let id = db.last_insert_rowid();
+    Ok(Cliente { id, nombre, telefono, email, descuento_porcentaje, notas, activo: true })
+}
+
+#[tauri::command]
+pub fn actualizar_cliente(
+    datos: ActualizarCliente,
+    state: State<'_, AppState>,
+) -> Result<bool, String> {
+    let db = state.db.lock().unwrap();
+    db.execute(
+        "UPDATE clientes SET nombre = ?, telefono = ?, email = ?, descuento_porcentaje = ?, notas = ? WHERE id = ?",
+        rusqlite::params![
+            datos.nombre, datos.telefono, datos.email,
+            datos.descuento_porcentaje, datos.notas, datos.id
+        ],
+    ).map_err(|e| e.to_string())?;
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn toggle_cliente_activo(id: i64, state: State<'_, AppState>) -> Result<bool, String> {
+    let db = state.db.lock().unwrap();
+    db.execute(
+        "UPDATE clientes SET activo = CASE activo WHEN 1 THEN 0 ELSE 1 END WHERE id = ?",
+        rusqlite::params![id],
+    ).map_err(|e| e.to_string())?;
+    Ok(true)
+}
+
+// ─── Comandos de Config ───────────────────────────────────
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ConfigDescuentos {
+    pub descuento_max_vendedor_pct: f64,
+    pub descuento_max_total_pct: f64,
+    pub precio_minimo_global_margen: f64,
+}
+
+#[tauri::command]
+pub fn obtener_config_descuentos(state: State<'_, AppState>) -> ConfigDescuentos {
+    let db = state.db.lock().unwrap();
+    db.query_row(
+        "SELECT descuento_max_vendedor_pct, descuento_max_total_pct, precio_minimo_global_margen FROM config_descuentos WHERE id = 1",
+        [],
+        |row| Ok(ConfigDescuentos {
+            descuento_max_vendedor_pct: row.get(0)?,
+            descuento_max_total_pct: row.get(1)?,
+            precio_minimo_global_margen: row.get(2)?,
+        }),
+    ).unwrap_or(ConfigDescuentos {
+        descuento_max_vendedor_pct: 15.0,
+        descuento_max_total_pct: 10.0,
+        precio_minimo_global_margen: 5.0,
+    })
+}
+
+// ─── Configuración del negocio (para tickets) ───────────────
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ConfigNegocio {
+    pub nombre: String,
+    pub direccion: String,
+    pub telefono: String,
+    pub rfc: String,
+    pub mensaje_pie: String,
+    pub respaldo_auto_activo: bool,
+    pub respaldo_auto_hora: String,
+    /// Nombre del sistema de la impresora térmica ESC/POS.
+    /// Si está vacío, el ticket cae al fallback HTML (navegador del sistema).
+    #[serde(default)]
+    pub impresora_termica: String,
+}
+
+#[tauri::command]
+pub fn obtener_config_negocio(state: State<'_, AppState>) -> ConfigNegocio {
+    let db = state.db.lock().unwrap();
+    db.query_row(
+        "SELECT nombre, direccion, telefono, rfc, mensaje_pie,
+                respaldo_auto_activo, respaldo_auto_hora, impresora_termica
+         FROM config_negocio WHERE id = 1",
+        [],
+        |row| Ok(ConfigNegocio {
+            nombre: row.get(0)?,
+            direccion: row.get(1)?,
+            telefono: row.get(2)?,
+            rfc: row.get(3)?,
+            mensaje_pie: row.get(4)?,
+            respaldo_auto_activo: row.get::<_, i64>(5)? != 0,
+            respaldo_auto_hora: row.get(6)?,
+            impresora_termica: row.get(7)?,
+        }),
+    ).unwrap_or(ConfigNegocio {
+        nombre: "Moto Refaccionaria".into(),
+        direccion: String::new(),
+        telefono: String::new(),
+        rfc: String::new(),
+        mensaje_pie: "¡Gracias por su compra!".into(),
+        respaldo_auto_activo: true,
+        respaldo_auto_hora: "23:00".into(),
+        impresora_termica: String::new(),
+    })
+}
+
+#[tauri::command]
+pub fn actualizar_config_negocio(
+    datos: ConfigNegocio,
+    state: State<'_, AppState>,
+) -> Result<ConfigNegocio, String> {
+    let db = state.db.lock().unwrap();
+    db.execute(
+        "UPDATE config_negocio SET nombre = ?, direccion = ?, telefono = ?, rfc = ?,
+         mensaje_pie = ?, respaldo_auto_activo = ?, respaldo_auto_hora = ?,
+         impresora_termica = ?, updated_at = datetime('now') WHERE id = 1",
+        rusqlite::params![
+            datos.nombre, datos.direccion, datos.telefono, datos.rfc, datos.mensaje_pie,
+            if datos.respaldo_auto_activo { 1 } else { 0 },
+            datos.respaldo_auto_hora,
+            datos.impresora_termica,
+        ],
+    ).map_err(|e| e.to_string())?;
+    Ok(datos)
+}

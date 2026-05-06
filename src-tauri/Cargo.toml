@@ -1,0 +1,75 @@
+[package]
+name = "pos"
+version = "0.1.24"
+description = "POS Moto Refaccionaria"
+authors = ["Moto Refaccionaria"]
+edition = "2021"
+
+[lib]
+name = "pos_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+
+# Serialización
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Base de datos SQLite
+rusqlite = { version = "0.31", features = ["bundled", "backup"] }
+
+# Fechas y horas
+chrono = { version = "0.4", features = ["serde"] }
+
+# IDs únicos
+uuid = { version = "1", features = ["v4", "v7"] }
+
+# HTTP client (para sync con servidor remoto, Fase 3.2)
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
+
+# Seguridad / contraseñas
+bcrypt = "0.15"
+
+# Manejo de errores
+thiserror = "1"
+anyhow = "1"
+
+# Async runtime (para worker de sync)
+tokio = { version = "1", features = ["full"] }
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+
+# Abrir archivos en el sistema
+open = "5"
+
+# === Servidor LAN para PWA móvil (Fase 3.1) ===
+# HTTP server async
+axum = { version = "0.7", features = ["macros"] }
+axum-server = { version = "0.7", features = ["tls-rustls"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs", "cors", "trace", "limit"] }
+# JWT para autenticación
+jsonwebtoken = "9"
+# Certificado HTTPS auto-firmado
+rcgen = "0.13"
+# Detección de IP LAN
+local-ip-address = "0.6"
+# Generación de QR
+qrcode = { version = "0.14", default-features = false, features = ["svg"] }
+# Base64 (para devolver QR como data URL)
+base64 = "0.22"
+# Random tokens
+rand = "0.8"
+

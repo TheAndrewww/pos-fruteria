@@ -1,0 +1,9 @@
+# Configuración Railway.
+# Asume plugin Postgres agregado (DATABASE_URL inyectado).
+
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+restartPolicyType = "always"
