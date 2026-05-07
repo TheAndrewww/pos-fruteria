@@ -12,14 +12,16 @@ import CortesCaja, { ModalAperturaCaja } from './CortesCaja';
 import HistorialVentas from './HistorialVentas';
 import Reportes from './Reportes';
 import Ajustes from './Ajustes';
+import Merma from './Merma';
+import Entradas from './Entradas';
 import { useCortesStore } from '../store/cortesStore';
 import {
   ShoppingCart, Package, BarChart3, LogOut,
   Users, DollarSign, History, Settings, TrendingUp,
-  Menu, X,
+  Menu, X, AlertTriangle, PackagePlus,
 } from 'lucide-react';
 
-type Modulo = 'venta' | 'catalogo' | 'dashboard' | 'usuarios' | 'cortes' | 'historial' | 'reportes' | 'ajustes';
+type Modulo = 'venta' | 'catalogo' | 'dashboard' | 'usuarios' | 'cortes' | 'historial' | 'reportes' | 'ajustes' | 'merma' | 'entradas';
 
 interface EstadisticasDia {
   total_ventas: number;
@@ -132,6 +134,8 @@ export default function Dashboard() {
   const menuItems: { id: Modulo; label: string; icon: React.ReactNode; key: string; visible: boolean }[] = [
     { id: 'venta', label: 'Punto de Venta', icon: <ShoppingCart size={18} />, key: 'F1', visible: tienePermiso('ventas', 'crear') },
     { id: 'catalogo', label: 'Productos', icon: <Package size={18} />, key: 'F4', visible: tienePermiso('inventario', 'ver') },
+    { id: 'entradas' as Modulo, label: 'Entradas', icon: <PackagePlus size={18} />, key: '', visible: tienePermiso('inventario', 'ver') },
+    { id: 'merma' as Modulo, label: 'Merma', icon: <AlertTriangle size={18} />, key: '', visible: tienePermiso('inventario', 'ver') },
     { id: 'dashboard', label: 'Dashboard', icon: <BarChart3 size={18} />, key: 'F8', visible: true },
     { id: 'historial', label: 'Historial Ventas', icon: <History size={18} />, key: 'F7', visible: tienePermiso('ventas', 'ver') },
     { id: 'cortes', label: 'Cortes de Caja', icon: <DollarSign size={18} />, key: 'F11', visible: true },
@@ -359,6 +363,8 @@ export default function Dashboard() {
         )}
         {modulo === 'historial' && <HistorialVentas />}
         {modulo === 'reportes' && <Reportes />}
+        {modulo === 'merma' && <Merma />}
+        {modulo === 'entradas' && <Entradas />}
         <div style={{ display: modulo === 'cortes' ? 'flex' : 'none', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
           <CortesCaja
             triggerMovimiento={triggerMovimiento}
