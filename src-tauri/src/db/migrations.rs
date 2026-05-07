@@ -164,7 +164,7 @@ fn migracion_004_sync_remoto_y_sucursales(conn: &Connection) -> Result<()> {
     // --- 4. uuid + updated_at + deleted_at en tablas sincronizables ---
     // Tablas que ya tienen updated_at → solo agregar uuid + deleted_at
     let con_updated: &[&str] = &[
-        "productos", "proveedores", "clientes", "usuarios",
+        "productos", "clientes", "usuarios",
     ];
     for tabla in con_updated {
         let _ = conn.execute(&format!("ALTER TABLE {} ADD COLUMN uuid TEXT", tabla), []);
@@ -189,7 +189,7 @@ fn migracion_004_sync_remoto_y_sucursales(conn: &Connection) -> Result<()> {
 
     // --- 5. Poblar uuids en filas existentes ---
     let todas_sync: &[&str] = &[
-        "productos", "proveedores", "clientes", "usuarios", "categorias",
+        "productos", "clientes", "usuarios", "categorias",
         "ventas", "venta_detalle", "presupuestos", "presupuesto_detalle",
         "ordenes_pedido", "orden_pedido_detalle", "recepciones", "recepcion_detalle",
         "cortes", "corte_denominaciones", "corte_vendedores", "movimientos_caja",
@@ -305,7 +305,7 @@ fn migracion_005_triggers_outbox(conn: &Connection) -> Result<()> {
     // worker los incluye al empacar el padre.
     let tablas_sync: &[&str] = &[
         // Catálogo (row-level, LWW)
-        "productos", "proveedores", "clientes", "usuarios", "categorias",
+        "productos", "clientes", "usuarios", "categorias",
         "sucursales", "stock_sucursal",
         // Transaccionales (aggregate con children)
         "ventas", "presupuestos", "ordenes_pedido", "recepciones",
@@ -375,7 +375,7 @@ fn migracion_005_triggers_outbox(conn: &Connection) -> Result<()> {
     // lo esté imponiendo mediante sync_suppress).
     // Tablas con updated_at propio que no lo tocan en cada UPDATE.
     let con_updated_auto: &[&str] = &[
-        "productos", "proveedores", "clientes", "usuarios", "categorias",
+        "productos", "clientes", "usuarios", "categorias",
         "sucursales", "stock_sucursal",
         "ventas", "presupuestos", "ordenes_pedido", "recepciones",
         "cortes", "devoluciones", "transferencias",
@@ -463,7 +463,7 @@ fn migracion_007_uuid_auto_y_backfill(conn: &Connection) -> Result<()> {
     // (transferencias se omite — ya tiene UNIQUE NOT NULL, no acepta INSERT
     // sin uuid; ese flujo sí lo genera.)
     let tablas: &[&str] = &[
-        "productos", "proveedores", "clientes", "usuarios", "categorias",
+        "productos", "clientes", "usuarios", "categorias",
         "sucursales", "stock_sucursal",
         "ventas", "venta_detalle", "presupuestos", "presupuesto_detalle",
         "ordenes_pedido", "orden_pedido_detalle", "recepciones", "recepcion_detalle",
@@ -543,7 +543,7 @@ fn migracion_007_uuid_auto_y_backfill(conn: &Connection) -> Result<()> {
     //    Solo tablas con triggers de outbox (catálogo + transaccionales
     //    padres). Los detalles van junto al padre.
     let tablas_outbox: &[&str] = &[
-        "productos", "proveedores", "clientes", "usuarios", "categorias",
+        "productos", "clientes", "usuarios", "categorias",
         "sucursales", "stock_sucursal",
         "ventas", "presupuestos", "ordenes_pedido", "recepciones",
         "cortes", "devoluciones", "transferencias",
@@ -590,19 +590,14 @@ fn migracion_007_uuid_auto_y_backfill(conn: &Connection) -> Result<()> {
 // Agrega columna `activo` a proveedores (soft-toggle, mismo patrón que clientes).
 // Sin esto la nueva página de Proveedores no puede ocultar/restaurar proveedores
 // sin perder los productos que los referencian.
-fn migracion_009_proveedores_activo(conn: &Connection) -> Result<()> {
-    if !columna_existe(conn, "proveedores", "activo") {
-        let _ = conn.execute(
-            "ALTER TABLE proveedores ADD COLUMN activo INTEGER NOT NULL DEFAULT 1",
-            [],
-        );
-    }
+// No-op: tabla proveedores no existe en frutería
+fn migracion_009_proveedores_activo(_conn: &Connection) -> Result<()> {
     Ok(())
 }
 
 fn migracion_008_reparar_esquema_sync(conn: &Connection) -> Result<()> {
     let tablas: &[&str] = &[
-        "productos", "proveedores", "clientes", "usuarios", "categorias",
+        "productos", "clientes", "usuarios", "categorias",
         "sucursales", "stock_sucursal",
         "ventas", "venta_detalle", "presupuestos", "presupuesto_detalle",
         "ordenes_pedido", "orden_pedido_detalle", "recepciones", "recepcion_detalle",
@@ -651,7 +646,7 @@ fn migracion_008_reparar_esquema_sync(conn: &Connection) -> Result<()> {
     //    referencien el esquema actual ya reparado. Si v5 o v7 fallaron en
     //    crear algún trigger por columna faltante, ahora se crean limpios.
     let con_updated_auto: &[&str] = &[
-        "productos", "proveedores", "clientes", "usuarios", "categorias",
+        "productos", "clientes", "usuarios", "categorias",
         "sucursales", "stock_sucursal",
         "ventas", "presupuestos", "ordenes_pedido", "recepciones",
         "cortes", "devoluciones", "transferencias",
@@ -677,7 +672,7 @@ fn migracion_008_reparar_esquema_sync(conn: &Connection) -> Result<()> {
     }
 
     let tablas_uuid_auto: &[&str] = &[
-        "productos", "proveedores", "clientes", "usuarios", "categorias",
+        "productos", "clientes", "usuarios", "categorias",
         "sucursales", "stock_sucursal",
         "ventas", "venta_detalle", "presupuestos", "presupuesto_detalle",
         "ordenes_pedido", "orden_pedido_detalle", "recepciones", "recepcion_detalle",
