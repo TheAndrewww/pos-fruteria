@@ -88,7 +88,7 @@ export default function Login() {
         <div className="text-center" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <img
             src="/logo.png"
-            alt="Moto Refaccionaria LB"
+            alt="Paulín Premium Fruits"
             style={{ width: 180, height: 'auto', marginBottom: 8 }}
             draggable={false}
           />

@@ -156,7 +156,7 @@ export default function Ajustes() {
             <Campo label="Nombre del negocio *"
               value={config.nombre}
               onChange={v => setField('nombre', v)}
-              placeholder="Moto Refaccionaria LB" />
+              placeholder="Paulín Premium Fruits" />
 
             <Campo label="Dirección"
               value={config.direccion}

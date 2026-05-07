@@ -85,8 +85,8 @@ export function buildTicketHTML(negocio: ConfigNegocio, t: TicketData): string {
 </style></head><body>
   ${t.es_presupuesto ? '<div class="center"><span class="reprint">*** PRESUPUESTO ***</span><br><span style="font-size: 7pt; font-weight: bold; padding-top: 2px; display: inline-block;">Esta cotización puede variar sin previo aviso.</span></div>' : (t.reimpresion ? '<div class="center"><span class="reprint">*** REIMPRESIÓN ***</span></div>' : '')}
   <div class="center">
-    <img class="logo" src="${window.location.origin}/logo-ticket.png" alt="Moto Refaccionaria LB" onerror="this.style.display='none'" />
-    <div class="brand-name">${escapeHTML(negocio.nombre || 'MOTO REFACCIONARIA LB')}</div>
+    <img class="logo" src="${window.location.origin}/logo-ticket.png" alt="Paulín Premium Fruits" onerror="this.style.display='none'" />
+    <div class="brand-name">${escapeHTML(negocio.nombre || 'PAULÍN PREMIUM FRUITS')}</div>
     <div class="brand-sub">ABASOLO, GUANAJUATO</div>
   </div>
   ${negocio.direccion ? `<div class="center muted">${escapeHTML(negocio.direccion)}</div>` : ''}
@@ -117,7 +117,7 @@ export function buildTicketHTML(negocio: ConfigNegocio, t: TicketData): string {
   ` : ''}
   <div class="center footer-msg">${escapeHTML(negocio.mensaje_pie || '¡Gracias por su compra!')}</div>
   <div class="center muted">Conserve este ticket</div>
-  <div class="center footer-brand">MOTO REFACCIONARIA LB</div>
+  <div class="center footer-brand">PAULÍN PREMIUM FRUITS</div>
 </body></html>`;
 }
 
