@@ -167,22 +167,19 @@ export const useProductStore = create<ProductState>((set, get) => ({
   },
 
   cargarProveedores: async () => {
-    try {
-      const proveedores = await invoke<Proveedor[]>('listar_proveedores');
-      set({ proveedores });
-    } catch {}
+    // No-op: proveedores no existen en frutería
+    set({ proveedores: [] });
   },
 
   cargarTodo: async () => {
     set({ cargando: true });
     try {
-      const [productos, categorias, proveedores] = await Promise.all([
+      const [productos, categorias] = await Promise.all([
         invoke<Producto[]>('listar_productos'),
         invoke<Categoria[]>('listar_categorias'),
-        invoke<Proveedor[]>('listar_proveedores'),
       ]);
       rebuildIndex(productos);
-      set({ productos, categorias, proveedores, cargando: false });
+      set({ productos, categorias, proveedores: [], cargando: false });
     } catch {
       set({ cargando: false });
     }

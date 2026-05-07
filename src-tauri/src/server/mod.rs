@@ -109,10 +109,6 @@ fn build_router(state: ServerState, pwa_dist_dir: Option<PathBuf>) -> Router {
         .route("/api/me", get(handlers::me))
         .route("/api/productos", get(handlers::productos_buscar))
         .route("/api/productos/por_codigo/:codigo", get(handlers::producto_por_codigo))
-        .route("/api/proveedores", get(handlers::proveedores))
-        .route("/api/ordenes_pedido", get(handlers::ordenes_listar))
-        .route("/api/ordenes_pedido/:id", get(handlers::orden_detalle))
-        .route("/api/recepciones", post(handlers::recepcion_crear))
         .layer(middleware::from_fn_with_state(state.clone(), auth::require_auth));
 
     let cors = CorsLayer::new()

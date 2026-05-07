@@ -86,12 +86,10 @@ export default function Login() {
 
         {/* Logo */}
         <div className="text-center" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <img
-            src="/logo.png"
-            alt="Paulín Premium Fruits"
-            style={{ width: 180, height: 'auto', marginBottom: 8 }}
-            draggable={false}
-          />
+          <div style={{ fontSize: 64, marginBottom: 4, lineHeight: 1 }}>🍊</div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-primary)', letterSpacing: '-0.5px' }}>
+            Paulín Premium Fruits
+          </h1>
           <p style={{ color: 'var(--color-text-muted)', fontSize: 13 }}>
             Sistema de Punto de Venta
           </p>

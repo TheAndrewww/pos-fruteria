@@ -10,8 +10,7 @@ use commands::productos::{
     listar_productos, obtener_producto_por_codigo, generar_codigo_interno,
     crear_producto, actualizar_producto, eliminar_producto, ajustar_stock,
     listar_productos_stock_bajo,
-    listar_categorias, listar_proveedores,
-    listar_clientes, crear_cliente, actualizar_cliente, toggle_cliente_activo,
+    listar_categorias,
     obtener_config_descuentos,
     obtener_config_negocio, actualizar_config_negocio,
     historial_precios_producto,
@@ -159,12 +158,6 @@ pub fn run() {
             listar_productos_stock_bajo,
             historial_precios_producto,
             listar_categorias,
-            listar_proveedores,
-            // Clientes (simplificado — sin CRUD de clientes dedicado)
-            listar_clientes,
-            crear_cliente,
-            actualizar_cliente,
-            toggle_cliente_activo,
             // Config
             obtener_config_descuentos,
             obtener_config_negocio,

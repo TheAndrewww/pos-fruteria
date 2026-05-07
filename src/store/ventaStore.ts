@@ -318,10 +318,8 @@ export const useVentaStore = create<VentaState>((set, get) => {
     }),
 
     cargarClientes: async () => {
-      try {
-        const clientes = await invoke<Cliente[]>('listar_clientes');
-        set({ clientes });
-      } catch {}
+      // No-op: clientes no existen en frutería
+      set({ clientes: [] });
     },
 
     setMetodoPago: (metodo) => updateActiva(t => ({ ...t, metodoPago: metodo })),
