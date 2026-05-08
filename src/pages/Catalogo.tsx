@@ -292,11 +292,12 @@ export default function Catalogo() {
   // ──── Render ────
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div className="page-module">
+      <div className="module-card">
       {/* Header */}
       <div style={{
         padding: '12px 20px', borderBottom: '1px solid var(--color-border)',
-        background: 'var(--color-surface)', display: 'flex', alignItems: 'center', gap: 12,
+        display: 'flex', alignItems: 'center', gap: 12,
       }}>
         <Package size={20} style={{ color: 'var(--color-primary)' }} />
         <h2 style={{ fontSize: 17, fontWeight: 800, flex: 1 }}>Catálogo de Frutas</h2>
@@ -442,6 +443,7 @@ export default function Catalogo() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

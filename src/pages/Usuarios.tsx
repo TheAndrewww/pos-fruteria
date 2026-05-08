@@ -232,7 +232,7 @@ export default function UsuariosPage() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div className="page-module"><div className="module-card">
       {/* Toolbar */}
       <div style={{
         padding: '12px 16px', borderBottom: '1px solid var(--color-border)',
@@ -318,6 +318,7 @@ export default function UsuariosPage() {
       </div>
 
       {showForm && <FormUsuario />}
+    </div>
     </div>
   );
 }

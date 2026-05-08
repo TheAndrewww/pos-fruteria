@@ -136,7 +136,7 @@ export default function Ajustes() {
     setConfig(prev => ({ ...prev, [k]: v }));
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div className="page-module"><div className="module-card">
       <div className="pos-page-header" style={{
         padding: '12px 20px', borderBottom: '1px solid var(--color-border)',
         background: 'var(--color-surface)', display: 'flex', alignItems: 'center', gap: 10,
@@ -379,6 +379,7 @@ export default function Ajustes() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

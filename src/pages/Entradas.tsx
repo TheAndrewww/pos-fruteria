@@ -81,7 +81,7 @@ export default function Entradas() {
   const fmt = (n: number) => `$${n.toFixed(2)}`;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div className="page-module"><div className="module-card">
       {/* Header */}
       <div style={{
         padding: '12px 20px', borderBottom: '1px solid var(--color-border)',
@@ -234,6 +234,7 @@ export default function Entradas() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

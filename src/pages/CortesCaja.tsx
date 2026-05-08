@@ -134,14 +134,14 @@ export default function CortesCaja({
   }, []);
 
   return (
-    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div className="page-module">
+      <div className="module-card animate-fade-in">
 
       {/* ─── Header ─── */}
       <div style={{
         padding: '16px 20px',
         borderBottom: '1px solid var(--color-border)',
         display: 'flex', alignItems: 'center', gap: 12,
-        background: 'var(--color-surface)',
       }}>
         <Calculator size={20} style={{ color: 'var(--color-primary)' }} />
         <h2 style={{ fontSize: 16, fontWeight: 800, flex: 1 }}>Cortes de Caja</h2>
@@ -232,6 +232,7 @@ export default function CortesCaja({
           fechaObjetivo={fechaObjetivoDia}
         />
       )}
+    </div>
     </div>
   );
 }
