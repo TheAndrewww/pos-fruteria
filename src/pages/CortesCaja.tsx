@@ -199,7 +199,7 @@ export default function CortesCaja({
       </div>
 
       {/* ─── Contenido Flotante ─── */}
-      <div style={{ flex: 1, overflow: 'auto', padding: '12px 20px' }}>
+      <div style={{ flex: 1, overflow: 'auto', padding: '8px 0' }}>
 
         {tab === 'movimientos' && (
           <TabMovimientos

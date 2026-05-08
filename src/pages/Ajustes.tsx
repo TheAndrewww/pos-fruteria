@@ -147,7 +147,7 @@ export default function Ajustes() {
       </div>
       </div>
 
-      <div style={{ flex: 1, overflow: 'auto', padding: '12px 24px', display: 'flex', justifyContent: 'center' }}>
+      <div style={{ flex: 1, overflow: 'auto', padding: '8px 0', display: 'flex', justifyContent: 'center' }}>
         <div style={{ width: '100%', maxWidth: 560, display: 'flex', flexDirection: 'column', gap: 20 }}>
           <section className="card" style={{ padding: 20 }}>
             <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Datos para el ticket</h3>

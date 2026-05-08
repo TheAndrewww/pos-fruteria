@@ -97,7 +97,7 @@ export default function Entradas() {
       </div>
 
       {/* Historial Flotante */}
-      <div style={{ flex: 1, overflow: 'auto', padding: '12px 16px' }}>
+      <div style={{ flex: 1, overflow: 'auto', padding: '8px 0' }}>
         {entradas.length === 0 ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: 12, color: 'var(--color-text-dim)' }}>
             <PackagePlus size={48} strokeWidth={1.2} />

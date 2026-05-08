@@ -292,7 +292,7 @@ export default function Reportes() {
       </div>
 
       {/* Contenido flotante */}
-      <div style={{ flex: 1, overflow: 'auto' }}>
+      <div style={{ flex: 1, overflow: 'auto', padding: '8px 0' }}>
         {cargando ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-text-dim)' }}>
             <span className="animate-pulse-soft">Cargando datos...</span>
