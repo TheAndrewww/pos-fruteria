@@ -261,6 +261,17 @@ export default function PuntoDeVenta() {
                 }}>
                 {modoMayoreo ? '📦 Mayoreo' : '🏷️ Menudeo'}
               </button>
+              {tabs.length > 1 && (
+                <button
+                  onClick={() => cerrarTab(tabActivaId)}
+                  style={{
+                    padding: '6px 12px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                    fontSize: 11, fontWeight: 700,
+                    background: 'var(--color-danger-soft)', color: 'var(--color-danger)',
+                  }}>
+                  ✕ Cerrar
+                </button>
+              )}
               {items.length > 0 && (
                 <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-danger)', fontSize: 11 }}
                   onClick={() => limpiarCarrito()}>
@@ -384,17 +395,7 @@ export default function PuntoDeVenta() {
                     color: isActive ? 'rgba(255,255,255,0.85)' : 'var(--color-primary)',
                   }}>{count} 🛒</span>
                 )}
-                {tabs.length > 1 && (
-                  <span onClick={(e) => { e.stopPropagation(); cerrarTab(tab.id); }}
-                    style={{
-                      position: 'absolute', top: -4, right: -4,
-                      width: 20, height: 20, borderRadius: '50%',
-                      background: 'var(--color-danger)', color: '#fff',
-                      fontSize: 11, fontWeight: 800, lineHeight: '20px',
-                      textAlign: 'center', cursor: 'pointer',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                    }}>✕</span>
-                )}
+
               </button>
             );
           })}
