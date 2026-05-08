@@ -171,24 +171,23 @@ export default function Dashboard() {
       )}
 
       <div className="pos-dashboard">
-        {/* ─── Sidebar ─── */}
+        {/* ─── Sidebar (Gmail style) ─── */}
         <div style={{
           display: 'flex', flexDirection: 'column',
-          background: 'var(--color-surface)',
-          borderRight: '1.5px solid var(--color-border)',
+          background: 'transparent',
           overflow: 'auto',
+          padding: '0 4px',
         }}>
           {/* Brand header */}
           <div style={{
-            padding: '16px 16px 12px',
+            padding: '16px 12px 14px',
             display: 'flex', alignItems: 'center', gap: 10,
-            borderBottom: '1px solid var(--color-border)',
           }}>
-          <img src={logoPaulin} alt="Paulín Premium Fruits" style={{ width: 170, height: 'auto' }} />
+          <img src={logoPaulin} alt="Paulín Premium Fruits" style={{ width: 160, height: 'auto' }} />
           </div>
 
           {/* Menu groups */}
-          <div style={{ flex: 1, padding: '8px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ flex: 1, padding: '0 4px', display: 'flex', flexDirection: 'column', gap: 2 }}>
             {menuGroups.map((group) => {
               const visible = group.items.filter(i => i.visible);
               if (visible.length === 0) return null;
@@ -196,7 +195,7 @@ export default function Dashboard() {
                 <div key={group.label}>
                   <div style={{
                     fontSize: 10, fontWeight: 700, color: 'var(--color-text-dim)',
-                    padding: '12px 12px 4px', letterSpacing: '1px',
+                    padding: '14px 14px 5px', letterSpacing: '1px',
                   }}>
                     {group.label}
                   </div>
@@ -206,12 +205,12 @@ export default function Dashboard() {
                       onClick={() => setModulo(item.id)}
                       style={{
                         display: 'flex', alignItems: 'center', gap: 12,
-                        padding: '12px 14px', borderRadius: 'var(--radius-md)',
+                        padding: '10px 14px', borderRadius: 26,
                         border: 'none', cursor: 'pointer',
                         fontSize: 14, fontWeight: 600,
                         width: '100%', textAlign: 'left',
-                        minHeight: 48,
-                        transition: 'all 0.08s',
+                        minHeight: 44,
+                        transition: 'all 0.1s',
                         background: modulo === item.id ? 'var(--color-primary)' : 'transparent',
                         color: modulo === item.id ? '#fff' : 'var(--color-text-muted)',
                       }}
@@ -236,8 +235,7 @@ export default function Dashboard() {
 
           {/* Footer: user + clock + logout */}
           <div style={{
-            padding: '12px', borderTop: '1px solid var(--color-border)',
-            display: 'flex', flexDirection: 'column', gap: 8,
+            padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 8,
           }}>
             {/* Clock */}
             <div style={{ textAlign: 'center' }}>
@@ -249,8 +247,8 @@ export default function Dashboard() {
             {/* User info */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: 10,
-              padding: '8px 10px', background: 'var(--color-surface-2)',
-              borderRadius: 'var(--radius-md)',
+              padding: '8px 10px', background: 'rgba(0,0,0,0.04)',
+              borderRadius: 14,
             }}>
               <div style={{
                 width: 32, height: 32, borderRadius: '50%',
@@ -272,7 +270,7 @@ export default function Dashboard() {
             <button
               className="btn btn-danger"
               onClick={logout}
-              style={{ width: '100%', justifyContent: 'center', gap: 8 }}
+              style={{ width: '100%', justifyContent: 'center', gap: 8, borderRadius: 14 }}
             >
               <LogOut size={18} />
               Cerrar Sesión

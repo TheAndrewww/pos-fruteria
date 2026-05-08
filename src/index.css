@@ -396,6 +396,7 @@ input, textarea, select {
   height: 100vh;
   min-height: 0;
   overflow: hidden;
+  background: var(--color-bg);
 }
 
 /* ============================================================
