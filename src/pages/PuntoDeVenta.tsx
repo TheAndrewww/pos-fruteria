@@ -265,58 +265,6 @@ export default function PuntoDeVenta() {
         borderLeft: '1.5px solid var(--color-border)',
         minHeight: 0, flexShrink: 0,
       }}>
-        {/* Vertical tab sidebar */}
-        <div style={{
-          width: 60, display: 'flex', flexDirection: 'column',
-          background: 'var(--color-bg)', borderRight: '1px solid var(--color-border)',
-          padding: '6px 0', gap: 4, alignItems: 'center',
-          overflowY: 'auto', flexShrink: 0,
-        }}>
-          {tabs.map((tab, idx) => {
-            const isActive = tab.id === tabActivaId;
-            const count = tab.items.reduce((a, i) => a + i.cantidad, 0);
-            return (
-              <button key={tab.id}
-                onClick={() => activarTab(tab.id)}
-                style={{
-                  width: 50, minHeight: 56, border: 'none', cursor: 'pointer',
-                  borderRadius: 12, display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', justifyContent: 'center', gap: 2,
-                  background: isActive ? 'var(--color-primary)' : 'var(--color-surface)',
-                  color: isActive ? '#fff' : 'var(--color-text-muted)',
-                  transition: 'all 0.1s', position: 'relative',
-                  boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
-                }}>
-                <span style={{ fontSize: 16, fontWeight: 800, lineHeight: 1 }}>V{idx + 1}</span>
-                {count > 0 && (
-                  <span style={{
-                    fontSize: 10, fontWeight: 700, lineHeight: 1,
-                    color: isActive ? 'rgba(255,255,255,0.8)' : 'var(--color-primary)',
-                  }}>{count}</span>
-                )}
-                {tabs.length > 1 && (
-                  <span onClick={(e) => { e.stopPropagation(); cerrarTab(tab.id); }}
-                    style={{
-                      position: 'absolute', top: 2, right: 4,
-                      fontSize: 10, opacity: 0.5, lineHeight: 1,
-                      color: isActive ? '#fff' : 'var(--color-text-dim)',
-                    }}>✕</span>
-                )}
-              </button>
-            );
-          })}
-          <button onClick={() => nuevaTab()}
-            style={{
-              width: 50, height: 50, border: '2px dashed var(--color-border)',
-              borderRadius: 12, cursor: 'pointer',
-              background: 'transparent', color: 'var(--color-primary)',
-              fontSize: 22, fontWeight: 700,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }} title="Nuevo carrito">
-            +
-          </button>
-        </div>
-
         {/* Cart content */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
 
@@ -434,6 +382,61 @@ export default function PuntoDeVenta() {
           </button>
         </div>
         </div>{/* end cart content */}
+
+        {/* Vertical tab sidebar — RIGHT */}
+        <div style={{
+          width: 56, display: 'flex', flexDirection: 'column',
+          background: 'var(--color-bg)', borderLeft: '1px solid var(--color-border)',
+          padding: '8px 0', gap: 6, alignItems: 'center',
+          overflowY: 'auto', flexShrink: 0,
+        }}>
+          {tabs.map((tab, idx) => {
+            const isActive = tab.id === tabActivaId;
+            const count = tab.items.reduce((a, i) => a + i.cantidad, 0);
+            return (
+              <button key={tab.id}
+                onClick={() => activarTab(tab.id)}
+                style={{
+                  width: 44, height: 52, border: 'none', cursor: 'pointer',
+                  borderRadius: 10, display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center', gap: 3,
+                  background: isActive ? 'var(--color-primary)' : 'var(--color-surface)',
+                  color: isActive ? '#fff' : 'var(--color-text-muted)',
+                  transition: 'all 0.12s', position: 'relative',
+                  boxShadow: isActive ? '0 2px 8px rgba(63,163,77,0.3)' : '0 1px 2px rgba(0,0,0,0.06)',
+                }}>
+                <span style={{ fontSize: 15, fontWeight: 800, lineHeight: 1 }}>{idx + 1}</span>
+                {count > 0 && (
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, lineHeight: 1,
+                    opacity: isActive ? 0.85 : 1,
+                    color: isActive ? '#fff' : 'var(--color-primary)',
+                  }}>{count} 🛒</span>
+                )}
+                {tabs.length > 1 && !isActive && (
+                  <span onClick={(e) => { e.stopPropagation(); cerrarTab(tab.id); }}
+                    style={{
+                      position: 'absolute', top: 1, right: 3,
+                      fontSize: 9, opacity: 0.4, lineHeight: 1,
+                    }}>✕</span>
+                )}
+              </button>
+            );
+          })}
+          <button onClick={() => nuevaTab()}
+            style={{
+              width: 44, height: 44, border: 'none',
+              borderRadius: 10, cursor: 'pointer',
+              background: 'var(--color-surface)',
+              color: 'var(--color-primary)',
+              fontSize: 20, fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+            }} title="Nuevo carrito">
+            +
+          </button>
+        </div>
+
       </div>{/* end panel derecho */}
 
       {/* ═══ MODAL COBRO (efectivo) ═══ */}
