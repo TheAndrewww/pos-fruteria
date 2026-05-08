@@ -260,55 +260,65 @@ export default function PuntoDeVenta() {
 
       {/* ═══ PANEL DERECHO: Carrito ═══ */}
       <div style={{
-        width: 380, display: 'flex', flexDirection: 'column',
+        width: 440, display: 'flex', flexDirection: 'row',
         background: 'var(--color-surface)',
         borderLeft: '1.5px solid var(--color-border)',
         minHeight: 0, flexShrink: 0,
       }}>
-        {/* Cart tabs */}
+        {/* Vertical tab sidebar */}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 0,
-          borderBottom: '2px solid var(--color-border)',
-          flexShrink: 0, overflow: 'auto',
+          width: 60, display: 'flex', flexDirection: 'column',
+          background: 'var(--color-bg)', borderRight: '1px solid var(--color-border)',
+          padding: '6px 0', gap: 4, alignItems: 'center',
+          overflowY: 'auto', flexShrink: 0,
         }}>
-          {tabs.map(tab => {
+          {tabs.map((tab, idx) => {
             const isActive = tab.id === tabActivaId;
             const count = tab.items.reduce((a, i) => a + i.cantidad, 0);
             return (
               <button key={tab.id}
                 onClick={() => activarTab(tab.id)}
                 style={{
-                  padding: '10px 16px', border: 'none', cursor: 'pointer',
-                  fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap',
-                  background: isActive ? 'var(--color-primary)' : 'transparent',
+                  width: 50, minHeight: 56, border: 'none', cursor: 'pointer',
+                  borderRadius: 12, display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center', gap: 2,
+                  background: isActive ? 'var(--color-primary)' : 'var(--color-surface)',
                   color: isActive ? '#fff' : 'var(--color-text-muted)',
-                  borderBottom: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  minHeight: 44, transition: 'all 0.08s',
+                  transition: 'all 0.1s', position: 'relative',
+                  boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
                 }}>
-                {tab.nombre}
+                <span style={{ fontSize: 16, fontWeight: 800, lineHeight: 1 }}>V{idx + 1}</span>
                 {count > 0 && (
                   <span style={{
-                    background: isActive ? 'rgba(255,255,255,0.3)' : 'var(--color-surface-2)',
-                    padding: '1px 6px', borderRadius: 8, fontSize: 11,
+                    fontSize: 10, fontWeight: 700, lineHeight: 1,
+                    color: isActive ? 'rgba(255,255,255,0.8)' : 'var(--color-primary)',
                   }}>{count}</span>
                 )}
                 {tabs.length > 1 && (
                   <span onClick={(e) => { e.stopPropagation(); cerrarTab(tab.id); }}
-                    style={{ fontSize: 14, opacity: 0.6, marginLeft: 2 }}>✕</span>
+                    style={{
+                      position: 'absolute', top: 2, right: 4,
+                      fontSize: 10, opacity: 0.5, lineHeight: 1,
+                      color: isActive ? '#fff' : 'var(--color-text-dim)',
+                    }}>✕</span>
                 )}
               </button>
             );
           })}
           <button onClick={() => nuevaTab()}
             style={{
-              padding: '8px 12px', border: 'none', cursor: 'pointer',
+              width: 50, height: 50, border: '2px dashed var(--color-border)',
+              borderRadius: 12, cursor: 'pointer',
               background: 'transparent', color: 'var(--color-primary)',
-              fontSize: 18, fontWeight: 700, minHeight: 44,
+              fontSize: 22, fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
             }} title="Nuevo carrito">
             +
           </button>
         </div>
+
+        {/* Cart content */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
 
         {/* Cart header */}
         <div style={{
@@ -423,7 +433,8 @@ export default function PuntoDeVenta() {
             {procesando ? 'Procesando...' : `💰 Cobrar ${fmt(total())}`}
           </button>
         </div>
-      </div>
+        </div>{/* end cart content */}
+      </div>{/* end panel derecho */}
 
       {/* ═══ MODAL COBRO (efectivo) ═══ */}
       {showCobro && (
