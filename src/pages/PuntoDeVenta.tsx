@@ -4,13 +4,13 @@ import { useState, useEffect } from 'react';
 import { useProductStore, type Producto } from '../store/productStore';
 import { useVentaStore, useVentaActiva } from '../store/ventaStore';
 import { useAuthStore } from '../store/authStore';
-import { ShoppingCart, Minus, Plus, Trash2, CheckCircle2, Printer, X, Search } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, Trash2, CheckCircle2, Printer } from 'lucide-react';
 import { invoke } from '../lib/invokeCompat';
 import { imprimirTicket, type ConfigNegocio, type TicketData } from '../utils/ticket';
 import { NumpadModal } from '../components/Numpad';
 
 export default function PuntoDeVenta() {
-  const { productos, cargarTodo, setBusqueda, productosFiltrados, categorias } = useProductStore();
+  const { productos, cargarTodo, categorias } = useProductStore();
   const {
     agregarProducto, quitarProducto, cambiarCantidad,
     total, subtotal, descuentoTotal, redondeo, numItems,
@@ -28,7 +28,6 @@ export default function PuntoDeVenta() {
   const [ultimoTicket, setUltimoTicket] = useState<TicketData | null>(null);
   const [cantidadModal, setCantidadModal] = useState<Producto | null>(null);
   const [catFiltro, setCatFiltro] = useState<number | null>(null);
-  const [localSearch, setLocalSearch] = useState('');
   const [flashId, setFlashId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -122,7 +121,7 @@ export default function PuntoDeVenta() {
   const fmt = (n: number) => `$${n.toFixed(2)}`;
 
   // Filter products
-  const filtrados = localSearch ? productosFiltrados() : productos.filter(p => p.activo);
+  const filtrados = productos.filter(p => p.activo);
   const productosMostrados = catFiltro ? filtrados.filter(p => p.categoria_id === catFiltro) : filtrados;
 
   // ──── Venta Exitosa ────
@@ -172,48 +171,25 @@ export default function PuntoDeVenta() {
     <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
       {/* ═══ PANEL IZQUIERDO: Grid de productos ═══ */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        {/* Barra de categorías + búsqueda */}
+        {/* Barra de categorías */}
         <div style={{
           padding: '10px 16px', borderBottom: '1.5px solid var(--color-border)',
-          display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0,
+          display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0, overflow: 'auto',
         }}>
-          {/* Search */}
-          <div style={{ position: 'relative', width: 220 }}>
-            <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-dim)' }} />
-            <input
-              className="input"
-              placeholder="Buscar..."
-              style={{ paddingLeft: 36 }}
-              value={localSearch}
-              onChange={(e) => { setLocalSearch(e.target.value); setBusqueda(e.target.value); }}
-            />
-          </div>
-          {localSearch && (
-            <button className="btn btn-ghost btn-sm" onClick={() => { setLocalSearch(''); setBusqueda(''); }}>
-              <X size={16} />
-            </button>
-          )}
-
-          {/* Divider */}
-          <div style={{ width: 1, height: 28, background: 'var(--color-border)', margin: '0 4px' }} />
-
-          {/* Category filters */}
-          <div style={{ display: 'flex', gap: 6, overflow: 'auto', flex: 1 }}>
-            <button
-              className={`btn ${catFiltro === null ? 'btn-primary' : 'btn-ghost'} btn-sm`}
-              onClick={() => setCatFiltro(null)}
+          <button
+            className={`btn ${catFiltro === null ? 'btn-primary' : 'btn-ghost'} btn-sm`}
+            onClick={() => setCatFiltro(null)}
+          >
+            Todos
+          </button>
+          {categorias.map(cat => (
+            <button key={cat.id}
+              className={`btn ${catFiltro === cat.id ? 'btn-primary' : 'btn-ghost'} btn-sm`}
+              onClick={() => setCatFiltro(catFiltro === cat.id ? null : cat.id)}
             >
-              Todos
+              {cat.nombre}
             </button>
-            {categorias.map(cat => (
-              <button key={cat.id}
-                className={`btn ${catFiltro === cat.id ? 'btn-primary' : 'btn-ghost'} btn-sm`}
-                onClick={() => setCatFiltro(catFiltro === cat.id ? null : cat.id)}
-              >
-                {cat.nombre}
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
 
         {/* Product grid */}
@@ -252,7 +228,7 @@ export default function PuntoDeVenta() {
           ))}
           {productosMostrados.length === 0 && (
             <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: 60, color: 'var(--color-text-dim)' }}>
-              {localSearch ? `No se encontró "${localSearch}"` : 'No hay productos activos'}
+              {'No hay productos activos'}
             </div>
           )}
         </div>
@@ -397,7 +373,7 @@ export default function PuntoDeVenta() {
               <button key={tab.id}
                 onClick={() => activarTab(tab.id)}
                 style={{
-                  width: 44, height: 52, border: 'none', cursor: 'pointer',
+                  width: 52, height: 52, border: 'none', cursor: 'pointer',
                   borderRadius: 10, display: 'flex', flexDirection: 'column',
                   alignItems: 'center', justifyContent: 'center', gap: 3,
                   background: isActive ? 'var(--color-primary)' : 'var(--color-surface)',
@@ -425,7 +401,7 @@ export default function PuntoDeVenta() {
           })}
           <button onClick={() => nuevaTab()}
             style={{
-              width: 44, height: 44, border: 'none',
+              width: 52, height: 52, border: 'none',
               borderRadius: 10, cursor: 'pointer',
               background: 'var(--color-surface)',
               color: 'var(--color-primary)',
