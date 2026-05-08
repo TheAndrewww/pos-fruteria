@@ -226,12 +226,11 @@ pub fn listar_ventas_dia(state: State<'_, AppState>) -> Vec<VentaResumen> {
     let hoy = chrono::Local::now().format("%Y-%m-%d").to_string();
     let mut stmt = db.prepare(
         r#"
-        SELECT v.id, v.folio, u.nombre_completo, cl.nombre,
+        SELECT v.id, v.folio, u.nombre_completo, NULL,
                v.total, v.metodo_pago, v.anulada, v.fecha,
                (SELECT COUNT(*) FROM venta_detalle vd WHERE vd.venta_id = v.id)
         FROM ventas v
         JOIN usuarios u ON u.id = v.usuario_id
-        LEFT JOIN clientes cl ON cl.id = v.cliente_id
         WHERE date(v.fecha) = ?
         ORDER BY v.fecha DESC
         "#,
@@ -407,12 +406,11 @@ pub fn buscar_ventas(
     let db = state.db.lock().unwrap();
 
     let mut sql = String::from(
-        r#"SELECT v.id, v.folio, u.nombre_completo, cl.nombre,
+        r#"SELECT v.id, v.folio, u.nombre_completo, NULL,
                   v.total, v.metodo_pago, v.anulada, v.fecha,
                   (SELECT COUNT(*) FROM venta_detalle vd WHERE vd.venta_id = v.id)
            FROM ventas v
            JOIN usuarios u ON u.id = v.usuario_id
-           LEFT JOIN clientes cl ON cl.id = v.cliente_id
            WHERE 1=1"#,
     );
     let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
@@ -428,12 +426,6 @@ pub fn buscar_ventas(
     if let Some(ff) = fecha_fin.as_ref().filter(|s| !s.trim().is_empty()) {
         sql.push_str(" AND date(v.fecha) <= date(?)");
         params.push(Box::new(ff.clone()));
-    }
-    if let Some(c) = cliente_texto.as_ref().filter(|s| !s.trim().is_empty()) {
-        sql.push_str(" AND (cl.nombre LIKE ? OR cl.telefono LIKE ?)");
-        let like = format!("%{}%", c.trim());
-        params.push(Box::new(like.clone()));
-        params.push(Box::new(like));
     }
     if let Some(a) = articulo_texto.as_ref().filter(|s| !s.trim().is_empty()) {
         sql.push_str(r#" AND EXISTS (
@@ -486,13 +478,12 @@ pub fn obtener_detalle_venta(
         Option<String>, String
     ) = db.query_row(
         r#"SELECT v.id, v.folio, v.usuario_id, u.nombre_completo,
-                  v.cliente_id, cl.nombre,
+                  v.cliente_id, NULL,
                   v.subtotal, v.descuento, v.total, v.metodo_pago,
                   v.anulada, ua.nombre_completo, v.motivo_anulacion, v.fecha
            FROM ventas v
            JOIN usuarios u ON u.id = v.usuario_id
            LEFT JOIN usuarios ua ON ua.id = v.anulada_por
-           LEFT JOIN clientes cl ON cl.id = v.cliente_id
            WHERE v.id = ?"#,
         rusqlite::params![venta_id],
         |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?,
