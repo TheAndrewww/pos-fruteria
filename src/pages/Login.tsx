@@ -1,6 +1,7 @@
 // pages/Login.tsx — Pantalla de login táctil (PIN pad grande)
 
 import { useState, useEffect, useCallback } from 'react';
+import logoPaulin from '../assets/LOGO PAULIN.svg';
 import { useAuthStore } from '../store/authStore';
 
 export default function Login() {
@@ -67,14 +68,8 @@ export default function Login() {
       }}>
         {/* Logo */}
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 80, lineHeight: 1, marginBottom: 8 }}>🍊</div>
-          <h1 style={{
-            fontSize: 26, fontWeight: 800,
-            color: 'var(--color-primary)', letterSpacing: '-0.5px',
-          }}>
-            Paulín Premium Fruits
-          </h1>
-          <p style={{ color: 'var(--color-text-dim)', fontSize: 14, marginTop: 4 }}>
+          <img src={logoPaulin} alt="Paulín Premium Fruits" style={{ width: 320, height: 'auto', marginBottom: 8 }} />
+          <p style={{ color: 'var(--color-text-dim)', fontSize: 14, marginTop: 8 }}>
             Punto de Venta
           </p>
         </div>

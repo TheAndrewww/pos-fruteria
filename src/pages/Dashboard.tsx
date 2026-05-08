@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore, leerModoCaja, setModoCajaLocal } from '../store/authStore';
 import { invoke, isTauri } from '../lib/invokeCompat';
+import iconTucan from '../assets/Group.svg';
 import ModalModoCaja from '../components/ModalModoCaja';
 import PuntoDeVenta from './PuntoDeVenta';
 import Catalogo from './Catalogo';
@@ -183,7 +184,7 @@ export default function Dashboard() {
             display: 'flex', alignItems: 'center', gap: 10,
             borderBottom: '1px solid var(--color-border)',
           }}>
-            <span style={{ fontSize: 28 }}>🍊</span>
+          <img src={iconTucan} alt="Paulín" style={{ width: 36, height: 'auto' }} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--color-primary)', lineHeight: 1.1 }}>PAULÍN</div>
               <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--color-text-dim)', letterSpacing: '1px' }}>PREMIUM FRUITS</div>
