@@ -16,6 +16,8 @@ export default function PuntoDeVenta() {
     total, subtotal, descuentoTotal, redondeo, numItems,
     setMetodoPago, setMontoRecibido,
     procesarVenta, ventaExitosa, cerrarVentaExitosa, procesando,
+    tabs, tabActivaId, nuevaTab, cerrarTab, activarTab,
+    limpiarCarrito,
   } = useVentaStore();
   const activa = useVentaActiva();
   const { items, metodoPago, montoRecibido } = activa;
@@ -262,9 +264,54 @@ export default function PuntoDeVenta() {
         borderLeft: '1.5px solid var(--color-border)',
         minHeight: 0, flexShrink: 0,
       }}>
+        {/* Cart tabs */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 0,
+          borderBottom: '2px solid var(--color-border)',
+          flexShrink: 0, overflow: 'auto',
+        }}>
+          {tabs.map(tab => {
+            const isActive = tab.id === tabActivaId;
+            const count = tab.items.reduce((a, i) => a + i.cantidad, 0);
+            return (
+              <button key={tab.id}
+                onClick={() => activarTab(tab.id)}
+                style={{
+                  padding: '10px 16px', border: 'none', cursor: 'pointer',
+                  fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap',
+                  background: isActive ? 'var(--color-primary)' : 'transparent',
+                  color: isActive ? '#fff' : 'var(--color-text-muted)',
+                  borderBottom: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  minHeight: 44, transition: 'all 0.08s',
+                }}>
+                {tab.nombre}
+                {count > 0 && (
+                  <span style={{
+                    background: isActive ? 'rgba(255,255,255,0.3)' : 'var(--color-surface-2)',
+                    padding: '1px 6px', borderRadius: 8, fontSize: 11,
+                  }}>{count}</span>
+                )}
+                {tabs.length > 1 && (
+                  <span onClick={(e) => { e.stopPropagation(); cerrarTab(tab.id); }}
+                    style={{ fontSize: 14, opacity: 0.6, marginLeft: 2 }}>✕</span>
+                )}
+              </button>
+            );
+          })}
+          <button onClick={() => nuevaTab()}
+            style={{
+              padding: '8px 12px', border: 'none', cursor: 'pointer',
+              background: 'transparent', color: 'var(--color-primary)',
+              fontSize: 18, fontWeight: 700, minHeight: 44,
+            }} title="Nuevo carrito">
+            +
+          </button>
+        </div>
+
         {/* Cart header */}
         <div style={{
-          padding: '12px 16px', borderBottom: '1px solid var(--color-border)',
+          padding: '8px 16px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
         }}>
           <span style={{ fontWeight: 700, fontSize: 16 }}>
@@ -272,7 +319,7 @@ export default function PuntoDeVenta() {
           </span>
           {items.length > 0 && (
             <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-danger)' }}
-              onClick={() => { const { limpiarCarrito } = useVentaStore.getState(); limpiarCarrito(); }}>
+              onClick={() => limpiarCarrito()}>
               Vaciar
             </button>
           )}

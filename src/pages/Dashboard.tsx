@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore, leerModoCaja, setModoCajaLocal } from '../store/authStore';
 import { invoke, isTauri } from '../lib/invokeCompat';
-import iconTucan from '../assets/Group.svg';
 import logoPaulin from '../assets/LOGO PAULIN.svg';
 import ModalModoCaja from '../components/ModalModoCaja';
 import PuntoDeVenta from './PuntoDeVenta';
