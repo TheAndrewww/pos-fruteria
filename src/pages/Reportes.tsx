@@ -219,10 +219,11 @@ export default function Reportes() {
   ];
 
   return (
-    <div className="page-module"><div className="module-card">
-      {/* Header */}
+    <div className="page-module" style={{ gap: 8 }}>
+      {/* Module 1: Header & Tabs */}
+      <div className="module-card" style={{ flex: 'none', borderRadius: 16 }}>
       <div className="pos-reportes-header" style={{
-        padding: '12px 20px', borderBottom: '1px solid var(--color-border)',
+        padding: '12px 20px',
         background: 'var(--color-surface)', display: 'flex', alignItems: 'center',
         justifyContent: 'space-between',
       }}>
@@ -288,9 +289,10 @@ export default function Reportes() {
           </button>
         ))}
       </div>
+      </div>
 
-      {/* Contenido */}
-      <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
+      {/* Contenido flotante */}
+      <div style={{ flex: 1, overflow: 'auto' }}>
         {cargando ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-text-dim)' }}>
             <span className="animate-pulse-soft">Cargando datos...</span>
@@ -313,7 +315,6 @@ export default function Reportes() {
           </>
         )}
       </div>
-    </div>
     </div>
   );
 }
