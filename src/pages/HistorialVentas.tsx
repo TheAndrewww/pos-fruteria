@@ -92,11 +92,11 @@ export default function HistorialVentas() {
   };
 
   return (
-    <div className="page-module">
-      <div className="module-card">
-      {/* Header */}
+    <div className="page-module" style={{ gap: 8 }}>
+      {/* Module 1: Header */}
+      <div className="module-card" style={{ flex: 'none', borderRadius: 16 }}>
       <div style={{
-        padding: '12px 20px', borderBottom: '1px solid var(--color-border)',
+        padding: '12px 20px', 
         background: 'var(--color-surface)', display: 'flex', alignItems: 'center', gap: 14,
       }}>
         <ScrollText size={18} style={{ color: 'var(--color-primary)' }} />
@@ -117,14 +117,16 @@ export default function HistorialVentas() {
             Devoluciones
           </button>
         </div>
+        </div>
       </div>
 
       {tab === 'ventas' && (
         <>
-          {/* Filtros */}
+          {/* Module 2: Filtros */}
+          <div className="module-card" style={{ flex: 'none', borderRadius: 16 }}>
           <div className="pos-hist-filtros" style={{
-            padding: '12px 20px', borderBottom: '1px solid var(--color-border)',
-            background: 'var(--color-surface-2)', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'end',
+            padding: '12px 20px',
+            background: 'var(--color-surface)', display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'end',
           }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 2, minWidth: 220 }}>
               <label style={{ fontSize: 11, color: 'var(--color-text-muted)', fontWeight: 600 }}>🔍 Buscar artículo</label>
@@ -165,9 +167,11 @@ export default function HistorialVentas() {
               <RefreshCw size={14} /> Limpiar
             </button>
           </div>
+          </div>
 
-          {/* Tabla ventas */}
-          <div style={{ flex: 1, overflow: 'auto' }}>
+          {/* Module 3: Tabla ventas */}
+          <div className="module-card" style={{ flex: 1, borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, overflow: 'auto', background: 'var(--color-surface)' }}>
             <table className="responsive-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead style={{ position: 'sticky', top: 0, background: 'var(--color-surface)', zIndex: 1 }}>
                 <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
@@ -244,11 +248,13 @@ export default function HistorialVentas() {
               </tbody>
             </table>
           </div>
+          </div>
         </>
       )}
 
       {tab === 'devoluciones' && (
-        <div style={{ flex: 1, overflow: 'auto' }}>
+        <div className="module-card" style={{ flex: 1, borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, overflow: 'auto', background: 'var(--color-surface)' }}>
           <table className="responsive-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead style={{ position: 'sticky', top: 0, background: 'var(--color-surface)', zIndex: 1 }}>
               <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
@@ -287,6 +293,7 @@ export default function HistorialVentas() {
             </tbody>
           </table>
         </div>
+        </div>
       )}
 
       {/* Modal anular */}
@@ -318,7 +325,6 @@ export default function HistorialVentas() {
           }}
         />
       )}
-    </div>
     </div>
   );
 }
