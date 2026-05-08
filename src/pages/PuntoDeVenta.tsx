@@ -227,19 +227,17 @@ export default function PuntoDeVenta() {
         width: 380, display: 'flex', flexDirection: 'row',
         minHeight: 0, flexShrink: 0, gap: 8,
       }}>
-        {/* Cart module */}
+        {/* Cart column — 3 separate modules */}
         <div style={{
           flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0,
-          background: 'var(--color-surface)', borderRadius: 16,
-          boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-          overflow: 'hidden',
+          gap: 8,
         }}>
-          {/* Cart header */}
+          {/* ── Module 1: Header ── */}
           <div style={{
             padding: '12px 16px',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
-            borderBottom: '1px solid var(--color-border)',
-            background: 'var(--color-surface)',
+            background: 'var(--color-surface)', borderRadius: 16,
+            boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
           }}>
             <span style={{ fontWeight: 800, fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
               🛒 Carrito
@@ -281,8 +279,12 @@ export default function PuntoDeVenta() {
             </div>
           </div>
 
-          {/* Cart items */}
-          <div style={{ flex: 1, overflow: 'auto' }}>
+          {/* ── Module 2: Items list ── */}
+          <div style={{
+            flex: 1, overflow: 'auto', minHeight: 0,
+            background: 'var(--color-surface)', borderRadius: 16,
+            boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+          }}>
             {items.length === 0 ? (
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -332,11 +334,11 @@ export default function PuntoDeVenta() {
             )}
           </div>
 
-          {/* Total + Cobrar module */}
+          {/* ── Module 3: Total + Cobrar ── */}
           <div style={{
             padding: '14px 14px 16px', flexShrink: 0,
-            borderTop: '2px solid var(--color-border)',
-            background: 'var(--color-surface)',
+            background: 'var(--color-surface)', borderRadius: 16,
+            boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
           }}>
             <div style={{ textAlign: 'center', marginBottom: 10 }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-dim)', textTransform: 'uppercase', letterSpacing: 1 }}>
