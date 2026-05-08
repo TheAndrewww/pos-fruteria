@@ -10,7 +10,7 @@ import { imprimirTicket, type ConfigNegocio, type TicketData } from '../utils/ti
 import { NumpadModal } from '../components/Numpad';
 
 export default function PuntoDeVenta() {
-  const { productos, cargarTodo, categorias } = useProductStore();
+  const { productos, cargarTodo } = useProductStore();
   const {
     agregarProducto, quitarProducto, cambiarCantidad,
     total, subtotal, descuentoTotal, redondeo, numItems,
@@ -27,7 +27,6 @@ export default function PuntoDeVenta() {
   const [configNegocio, setConfigNegocio] = useState<ConfigNegocio | null>(null);
   const [ultimoTicket, setUltimoTicket] = useState<TicketData | null>(null);
   const [cantidadModal, setCantidadModal] = useState<Producto | null>(null);
-  const [catFiltro, setCatFiltro] = useState<number | null>(null);
   const [flashId, setFlashId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -121,8 +120,7 @@ export default function PuntoDeVenta() {
   const fmt = (n: number) => `$${n.toFixed(2)}`;
 
   // Filter products
-  const filtrados = productos.filter(p => p.activo);
-  const productosMostrados = catFiltro ? filtrados.filter(p => p.categoria_id === catFiltro) : filtrados;
+  const productosMostrados = productos.filter(p => p.activo);
 
   // ──── Venta Exitosa ────
   if (ventaExitosa) {
@@ -171,26 +169,6 @@ export default function PuntoDeVenta() {
     <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
       {/* ═══ PANEL IZQUIERDO: Grid de productos ═══ */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        {/* Barra de categorías */}
-        <div style={{
-          padding: '10px 16px', borderBottom: '1.5px solid var(--color-border)',
-          display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0, overflow: 'auto',
-        }}>
-          <button
-            className={`btn ${catFiltro === null ? 'btn-primary' : 'btn-ghost'} btn-sm`}
-            onClick={() => setCatFiltro(null)}
-          >
-            Todos
-          </button>
-          {categorias.map(cat => (
-            <button key={cat.id}
-              className={`btn ${catFiltro === cat.id ? 'btn-primary' : 'btn-ghost'} btn-sm`}
-              onClick={() => setCatFiltro(catFiltro === cat.id ? null : cat.id)}
-            >
-              {cat.nombre}
-            </button>
-          ))}
-        </div>
 
         {/* Product grid */}
         <div style={{
