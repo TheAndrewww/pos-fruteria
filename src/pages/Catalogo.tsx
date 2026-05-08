@@ -87,8 +87,8 @@ export default function Catalogo() {
       try {
         if (editando) {
           await invoke('actualizar_producto', {
-            id: editando.id,
-            datos: {
+            producto: {
+              id: editando.id,
               codigo: form.codigo,
               nombre: form.nombre,
               emoji: form.emoji,
@@ -107,7 +107,7 @@ export default function Catalogo() {
           });
         } else {
           await invoke('crear_producto', {
-            datos: {
+            producto: {
               nombre: form.nombre,
               codigo: form.codigo || undefined,
               emoji: form.emoji,
@@ -443,7 +443,7 @@ export default function Catalogo() {
               <button className="btn btn-danger" onClick={async () => {
                 if (!usuario) return;
                 try {
-                  await invoke('eliminar_producto', { id: confirmarEliminar.id, usuarioId: usuario.id });
+                  await invoke('eliminar_producto', { productoId: confirmarEliminar.id, usuarioId: usuario.id });
                   await cargarTodo();
                   setConfirmarEliminar(null);
                   setShowForm(false);

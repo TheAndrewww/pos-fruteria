@@ -50,11 +50,13 @@ export default function Entradas() {
     setGuardando(true);
     try {
       await invoke('registrar_entrada', {
-        productoId: productoSel.id,
-        cantidad: cant,
-        costoUnitario: parseFloat(costoUnitario) || 0,
-        proveedor: proveedor || null,
-        notas: notas || null,
+        entrada: {
+          producto_id: productoSel.id,
+          cantidad: cant,
+          precio_costo: parseFloat(costoUnitario) || 0,
+          proveedor: proveedor || null,
+          notas: notas || null,
+        },
         usuarioId: usuario.id,
       });
       await cargarTodo();

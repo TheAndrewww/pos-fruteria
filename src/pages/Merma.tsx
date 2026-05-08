@@ -55,9 +55,11 @@ export default function Merma() {
     setGuardando(true);
     try {
       await invoke('registrar_merma', {
-        productoId: productoSel.id,
-        cantidad: cant,
-        motivo,
+        merma: {
+          producto_id: productoSel.id,
+          cantidad: cant,
+          motivo,
+        },
         usuarioId: usuario.id,
       });
       await cargarTodo();
