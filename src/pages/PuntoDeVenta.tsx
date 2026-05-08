@@ -17,10 +17,10 @@ export default function PuntoDeVenta() {
     setMetodoPago, setMontoRecibido,
     procesarVenta, ventaExitosa, cerrarVentaExitosa, procesando,
     tabs, tabActivaId, nuevaTab, cerrarTab, activarTab,
-    limpiarCarrito,
+    limpiarCarrito, toggleModoMayoreo,
   } = useVentaStore();
   const activa = useVentaActiva();
-  const { items, metodoPago, montoRecibido } = activa;
+  const { items, metodoPago, montoRecibido, modoMayoreo } = activa;
   const { usuario } = useAuthStore();
 
   const [showCobro, setShowCobro] = useState(false);
@@ -319,14 +319,27 @@ export default function PuntoDeVenta() {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
         }}>
           <span style={{ fontWeight: 700, fontSize: 16 }}>
-            🛒 Carrito <span className="mono" style={{ color: 'var(--color-primary)' }}>({numItems()})</span>
+            🛒 <span className="mono" style={{ color: 'var(--color-primary)' }}>({numItems()})</span>
           </span>
-          {items.length > 0 && (
-            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-danger)' }}
-              onClick={() => limpiarCarrito()}>
-              Vaciar
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {/* Toggle Menudeo / Mayoreo */}
+            <button
+              onClick={() => toggleModoMayoreo()}
+              style={{
+                padding: '5px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                fontSize: 12, fontWeight: 700, transition: 'all 0.15s',
+                background: modoMayoreo ? 'var(--color-accent)' : 'var(--color-surface-2)',
+                color: modoMayoreo ? '#fff' : 'var(--color-text-muted)',
+              }}>
+              {modoMayoreo ? '📦 Mayoreo' : '🏷️ Menudeo'}
             </button>
-          )}
+            {items.length > 0 && (
+              <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-danger)' }}
+                onClick={() => limpiarCarrito()}>
+                Vaciar
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Cart items */}
