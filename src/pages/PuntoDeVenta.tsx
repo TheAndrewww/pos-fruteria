@@ -384,11 +384,15 @@ export default function PuntoDeVenta() {
                     color: isActive ? 'rgba(255,255,255,0.85)' : 'var(--color-primary)',
                   }}>{count} 🛒</span>
                 )}
-                {tabs.length > 1 && !isActive && (
+                {tabs.length > 1 && (
                   <span onClick={(e) => { e.stopPropagation(); cerrarTab(tab.id); }}
                     style={{
-                      position: 'absolute', top: 2, right: 5,
-                      fontSize: 9, opacity: 0.4, lineHeight: 1,
+                      position: 'absolute', top: -4, right: -4,
+                      width: 20, height: 20, borderRadius: '50%',
+                      background: 'var(--color-danger)', color: '#fff',
+                      fontSize: 11, fontWeight: 800, lineHeight: '20px',
+                      textAlign: 'center', cursor: 'pointer',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                     }}>✕</span>
                 )}
               </button>
