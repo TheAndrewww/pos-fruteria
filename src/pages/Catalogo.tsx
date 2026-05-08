@@ -292,8 +292,9 @@ export default function Catalogo() {
   // ──── Render ────
 
   return (
-    <div className="page-module">
-      <div className="module-card">
+    <div className="page-module" style={{ gap: 8 }}>
+      {/* Module 1: Header + Search */}
+      <div className="module-card" style={{ flex: 'none', borderRadius: 16 }}>
       {/* Header */}
       <div style={{
         padding: '12px 20px', borderBottom: '1px solid var(--color-border)',
@@ -318,9 +319,10 @@ export default function Catalogo() {
             onChange={e => { setLocalBusqueda(e.target.value); setBusqueda(e.target.value); }} />
         </div>
       </div>
+      </div>
 
-      {/* Grid */}
-      <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
+      {/* Grid Flotante */}
+      <div style={{ flex: 1, overflow: 'auto', padding: '12px 16px' }}>
         {lista.length === 0 ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: 12, color: 'var(--color-text-dim)' }}>
             <Package size={48} strokeWidth={1.2} />
@@ -443,7 +445,6 @@ export default function Catalogo() {
           </div>
         </div>
       )}
-    </div>
     </div>
   );
 }

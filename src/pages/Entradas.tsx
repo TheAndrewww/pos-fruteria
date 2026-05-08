@@ -81,10 +81,11 @@ export default function Entradas() {
   const fmt = (n: number) => `$${n.toFixed(2)}`;
 
   return (
-    <div className="page-module"><div className="module-card">
-      {/* Header */}
+    <div className="page-module" style={{ gap: 8 }}>
+      {/* Module 1: Header */}
+      <div className="module-card" style={{ flex: 'none', borderRadius: 16 }}>
       <div style={{
-        padding: '12px 20px', borderBottom: '1px solid var(--color-border)',
+        padding: '12px 20px',
         background: 'var(--color-surface)', display: 'flex', alignItems: 'center', gap: 12,
       }}>
         <PackagePlus size={20} style={{ color: 'var(--color-success)' }} />
@@ -93,9 +94,10 @@ export default function Entradas() {
           <Plus size={16} /> Registrar Entrada
         </button>
       </div>
+      </div>
 
-      {/* Historial */}
-      <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
+      {/* Historial Flotante */}
+      <div style={{ flex: 1, overflow: 'auto', padding: '12px 16px' }}>
         {entradas.length === 0 ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: 12, color: 'var(--color-text-dim)' }}>
             <PackagePlus size={48} strokeWidth={1.2} />
@@ -234,7 +236,6 @@ export default function Entradas() {
           </div>
         </div>
       )}
-    </div>
     </div>
   );
 }

@@ -136,16 +136,18 @@ export default function Ajustes() {
     setConfig(prev => ({ ...prev, [k]: v }));
 
   return (
-    <div className="page-module"><div className="module-card">
+    <div className="page-module" style={{ gap: 8 }}>
+      <div className="module-card" style={{ flex: 'none', borderRadius: 16 }}>
       <div className="pos-page-header" style={{
-        padding: '12px 20px', borderBottom: '1px solid var(--color-border)',
+        padding: '12px 20px',
         background: 'var(--color-surface)', display: 'flex', alignItems: 'center', gap: 10,
       }}>
         <Settings size={20} style={{ color: 'var(--color-primary)' }} />
         <h2 style={{ fontSize: 17, fontWeight: 800, color: 'var(--color-text)' }}>Ajustes del Negocio</h2>
       </div>
+      </div>
 
-      <div style={{ flex: 1, overflow: 'auto', padding: 24, display: 'flex', justifyContent: 'center' }}>
+      <div style={{ flex: 1, overflow: 'auto', padding: '12px 24px', display: 'flex', justifyContent: 'center' }}>
         <div style={{ width: '100%', maxWidth: 560, display: 'flex', flexDirection: 'column', gap: 20 }}>
           <section className="card" style={{ padding: 20 }}>
             <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Datos para el ticket</h3>
@@ -379,7 +381,6 @@ export default function Ajustes() {
           </div>
         </div>
       )}
-    </div>
     </div>
   );
 }

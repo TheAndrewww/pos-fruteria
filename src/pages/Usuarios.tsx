@@ -232,10 +232,12 @@ export default function UsuariosPage() {
   }
 
   return (
-    <div className="page-module"><div className="module-card">
-      {/* Toolbar */}
+    <div className="page-module" style={{ gap: 8 }}>
+      {/* Module 1: Toolbar */}
+      <div className="module-card" style={{ flex: 'none', borderRadius: 16 }}>
       <div style={{
-        padding: '12px 16px', borderBottom: '1px solid var(--color-border)',
+        padding: '12px 20px',
+        background: 'var(--color-surface)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -249,9 +251,10 @@ export default function UsuariosPage() {
           <Plus size={16} /> Nuevo Usuario
         </button>
       </div>
+      </div>
 
-      {/* Lista */}
-      <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
+      {/* Module 2: Lista (flotante) */}
+      <div style={{ flex: 1, overflow: 'auto', padding: '12px 16px' }}>
         <div style={{ display: 'grid', gap: 8 }}>
           {usuarios.map(u => (
             <div key={u.id} className="card pos-list-row" style={{
@@ -318,7 +321,6 @@ export default function UsuariosPage() {
       </div>
 
       {showForm && <FormUsuario />}
-    </div>
     </div>
   );
 }

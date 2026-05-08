@@ -134,13 +134,13 @@ export default function CortesCaja({
   }, []);
 
   return (
-    <div className="page-module">
-      <div className="module-card animate-fade-in">
-
+    <div className="page-module animate-fade-in" style={{ gap: 8 }}>
+      {/* Module 1: Header & Tabs */}
+      <div className="module-card" style={{ flex: 'none', borderRadius: 16 }}>
       {/* ─── Header ─── */}
       <div style={{
         padding: '16px 20px',
-        borderBottom: '1px solid var(--color-border)',
+        background: 'var(--color-surface)',
         display: 'flex', alignItems: 'center', gap: 12,
       }}>
         <Calculator size={20} style={{ color: 'var(--color-primary)' }} />
@@ -196,9 +196,10 @@ export default function CortesCaja({
           </button>
         ))}
       </div>
+      </div>
 
-      {/* ─── Contenido ─── */}
-      <div style={{ flex: 1, overflow: 'auto', padding: 20 }}>
+      {/* ─── Contenido Flotante ─── */}
+      <div style={{ flex: 1, overflow: 'auto', padding: '12px 20px' }}>
 
         {tab === 'movimientos' && (
           <TabMovimientos
@@ -232,7 +233,6 @@ export default function CortesCaja({
           fechaObjetivo={fechaObjetivoDia}
         />
       )}
-    </div>
     </div>
   );
 }
