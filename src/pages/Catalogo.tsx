@@ -217,7 +217,7 @@ export default function Catalogo() {
             {/* Precios */}
             <div style={{ background: 'var(--color-surface-2)', padding: 14, borderRadius: 10 }}>
               <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: 10 }}>💰 PRECIOS</p>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: esAdmin ? '1fr 1fr 1fr' : '1fr 1fr', gap: 10 }}>
                 {esAdmin && (
                   <div>
                     <label style={labelStyle}>COSTO</label>
@@ -235,17 +235,6 @@ export default function Catalogo() {
                   <input className="input mono" type="number" step="0.50" value={form.precio_mayoreo}
                     onChange={e => setForm(f => ({ ...f, precio_mayoreo: parseFloat(e.target.value) || 0 }))} />
                 </div>
-                <div>
-                  <label style={labelStyle}>POR CAJA</label>
-                  <input className="input mono" type="number" step="0.50" value={form.precio_por_caja}
-                    onChange={e => setForm(f => ({ ...f, precio_por_caja: parseFloat(e.target.value) || 0 }))} />
-                </div>
-              </div>
-              <div style={{ marginTop: 8 }}>
-                <label style={labelStyle}>KG POR CAJA (para calcular equivalencia)</label>
-                <input className="input mono" type="number" step="0.1" value={form.kg_por_caja}
-                  onChange={e => setForm(f => ({ ...f, kg_por_caja: parseFloat(e.target.value) || 0 }))}
-                  style={{ width: '50%' }} />
               </div>
             </div>
 
@@ -374,7 +363,7 @@ export default function Catalogo() {
 
                   {/* Body */}
                   <div style={{ padding: '10px 16px' }}>
-                    {/* Precio principal */}
+                    {/* Precios lado a lado */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                       <div>
                         <div style={{ fontSize: 10, color: 'var(--color-text-dim)', fontWeight: 600 }}>MENUDEO</div>
@@ -383,18 +372,15 @@ export default function Catalogo() {
                         </span>
                         <span style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>/{(p as any).unidad || 'kg'}</span>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        {(p as any).precio_mayoreo > 0 && (
-                          <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
-                            Mayoreo: <span className="mono" style={{ fontWeight: 700 }}>{fmt((p as any).precio_mayoreo)}</span>
-                          </div>
-                        )}
-                        {(p as any).precio_por_caja > 0 && (
-                          <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
-                            Caja: <span className="mono" style={{ fontWeight: 700 }}>{fmt((p as any).precio_por_caja)}</span>
-                          </div>
-                        )}
-                      </div>
+                      {(p as any).precio_mayoreo > 0 && (
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: 10, color: 'var(--color-text-dim)', fontWeight: 600 }}>MAYOREO</div>
+                          <span className="mono" style={{ fontSize: 18, fontWeight: 700, color: 'var(--color-accent)' }}>
+                            {fmt((p as any).precio_mayoreo)}
+                          </span>
+                          <span style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>/{(p as any).unidad || 'kg'}</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Stock */}

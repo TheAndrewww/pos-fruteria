@@ -238,8 +238,12 @@ export default function PuntoDeVenta() {
             >
               <span className="product-tile-emoji">{(p as any).emoji || '🍎'}</span>
               <span className="product-tile-name">{p.nombre}</span>
-              <span className="product-tile-price">${p.precio_venta.toFixed(0)}</span>
-              <span className="product-tile-unit">/{(p as any).unidad || 'kg'}</span>
+              <span className="product-tile-price">${p.precio_venta.toFixed(0)}<span style={{ fontSize: 10, fontWeight: 500, color: 'var(--color-text-dim)' }}>/{(p as any).unidad || 'kg'}</span></span>
+              {(p as any).precio_mayoreo > 0 && (
+                <span style={{ fontSize: 11, color: 'var(--color-accent)', fontWeight: 600 }}>
+                  May: ${((p as any).precio_mayoreo).toFixed(0)}/{(p as any).unidad || 'kg'}
+                </span>
+              )}
               {p.stock_actual <= 0 && (
                 <span style={{
                   position: 'absolute', top: 6, right: 6,
