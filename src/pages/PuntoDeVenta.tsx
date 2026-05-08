@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useProductStore, type Producto } from '../store/productStore';
-import { useVentaStore, useVentaActiva, type MetodoPago } from '../store/ventaStore';
+import { useVentaStore, useVentaActiva } from '../store/ventaStore';
 import { useAuthStore } from '../store/authStore';
-import { ShoppingCart, Minus, Plus, Trash2, Banknote, CreditCard, ArrowRightLeft, CheckCircle2, Printer, X, Search } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, Trash2, CheckCircle2, Printer, X, Search } from 'lucide-react';
 import { invoke } from '../lib/invokeCompat';
 import { imprimirTicket, type ConfigNegocio, type TicketData } from '../utils/ticket';
 import { NumpadModal } from '../components/Numpad';
@@ -14,13 +14,13 @@ export default function PuntoDeVenta() {
   const {
     agregarProducto, quitarProducto, cambiarCantidad,
     total, subtotal, descuentoTotal, redondeo, numItems,
-    setMetodoPago, setMontoRecibido,
+    setMontoRecibido,
     procesarVenta, ventaExitosa, cerrarVentaExitosa, procesando,
     tabs, tabActivaId, nuevaTab, cerrarTab, activarTab,
     limpiarCarrito, toggleModoMayoreo,
   } = useVentaStore();
   const activa = useVentaActiva();
-  const { items, metodoPago, montoRecibido, modoMayoreo } = activa;
+  const { items, montoRecibido, modoMayoreo } = activa;
   const { usuario } = useAuthStore();
 
   const [showCobro, setShowCobro] = useState(false);
@@ -84,9 +84,7 @@ export default function PuntoDeVenta() {
 
   const handleCobrar = async () => {
     if (!usuario) return;
-    const montoFinal = metodoPago === 'efectivo' ? montoRecibido : total();
-    if (metodoPago === 'efectivo' && montoFinal < total()) return;
-    if (metodoPago !== 'efectivo') setMontoRecibido(total());
+    if (montoRecibido < total()) return;
 
     const itemsSnapshot = items.map(i => ({
       nombre: i.producto.nombre, codigo: i.producto.codigo,
@@ -96,8 +94,7 @@ export default function PuntoDeVenta() {
     const subtotalSnap = subtotal();
     const descuentoSnap = descuentoTotal();
     const redondeoSnap = redondeo();
-    const metodoSnap = metodoPago;
-    const recibidoSnap = metodoPago === 'efectivo' ? montoRecibido : total();
+    const recibidoSnap = montoRecibido;
 
     try {
       const venta = await procesarVenta(usuario.id);
@@ -107,7 +104,7 @@ export default function PuntoDeVenta() {
         usuario: usuario.nombre_completo, cliente: null,
         items: itemsSnapshot, subtotal: subtotalSnap,
         descuento: descuentoSnap, redondeo: redondeoSnap,
-        total: venta.total, metodo_pago: metodoSnap,
+        total: venta.total, metodo_pago: 'efectivo',
         monto_recibido: recibidoSnap, cambio: venta.cambio,
       };
       setUltimoTicket(ticket);
@@ -397,22 +394,7 @@ export default function PuntoDeVenta() {
           )}
         </div>
 
-        {/* Payment method */}
-        <div style={{ padding: '10px 14px', borderTop: '1px solid var(--color-border)', flexShrink: 0 }}>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {(['efectivo', 'tarjeta', 'transferencia'] as MetodoPago[]).map(m => (
-              <button key={m}
-                className={`btn ${metodoPago === m ? 'btn-primary' : 'btn-ghost'}`}
-                style={{ flex: 1, justifyContent: 'center', minHeight: 44, fontSize: 13 }}
-                onClick={() => setMetodoPago(m)}>
-                {m === 'efectivo' && <Banknote size={18} />}
-                {m === 'tarjeta' && <CreditCard size={18} />}
-                {m === 'transferencia' && <ArrowRightLeft size={18} />}
-                {m.charAt(0).toUpperCase() + m.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
+
 
         {/* Total + Cobrar */}
         <div style={{ padding: '14px 14px 16px', flexShrink: 0, borderTop: '2px solid var(--color-border)' }}>
@@ -434,13 +416,8 @@ export default function PuntoDeVenta() {
             }}
             disabled={items.length === 0 || procesando}
             onClick={() => {
-              if (metodoPago !== 'efectivo') {
-                setMontoRecibido(total());
-                handleCobrar();
-              } else {
-                setShowCobro(true);
-                setMontoRecibido(0);
-              }
+              setShowCobro(true);
+              setMontoRecibido(0);
             }}
           >
             {procesando ? 'Procesando...' : `💰 Cobrar ${fmt(total())}`}
