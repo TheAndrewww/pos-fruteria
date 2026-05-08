@@ -1,5 +1,4 @@
-// pages/Dashboard.tsx — Layout principal del POS Paulín Premium Fruits
-// Navegación lateral + contenido dinámico
+// pages/Dashboard.tsx — Layout principal con sidebar táctil (24")
 
 import { useState, useEffect } from 'react';
 import { useAuthStore, leerModoCaja, setModoCajaLocal } from '../store/authStore';
@@ -18,7 +17,7 @@ import { useCortesStore } from '../store/cortesStore';
 import {
   ShoppingCart, Package, BarChart3, LogOut,
   Users, DollarSign, History, Settings, TrendingUp,
-  Menu, X, AlertTriangle, PackagePlus,
+  AlertTriangle, PackagePlus,
 } from 'lucide-react';
 
 type Modulo = 'venta' | 'catalogo' | 'dashboard' | 'usuarios' | 'cortes' | 'historial' | 'reportes' | 'ajustes' | 'merma' | 'entradas';
@@ -42,34 +41,37 @@ export default function Dashboard() {
   const [verificandoApertura, setVerificandoApertura] = useState<boolean>(true);
   const [stockBajoCount, setStockBajoCount] = useState<number>(0);
   const [stockAlertDismiss, setStockAlertDismiss] = useState<boolean>(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+  const [reloj, setReloj] = useState('');
 
-  // Modo de caja (solo aplica en web). Si el usuario no ha configurado nunca,
-  // mostramos el modal de bienvenida bloqueante. Después puede cambiarlo
-  // desde el botón del topbar (chip clickeable).
   const [modoCaja, setModoCajaState] = useState<'espejo' | 'individual'>(() => leerModoCaja().modo);
   const [modoConfigurado, setModoConfigurado] = useState<boolean>(() => leerModoCaja().configurado);
   const [forzarModalModo, setForzarModalModo] = useState<boolean>(false);
   const debeMostrarModalModo = !isTauri() && (!modoConfigurado || forzarModalModo);
   const { obtenerAperturaHoy } = useCortesStore();
 
-  // Triggers para abrir modales de cortes desde shortcuts globales
   const [triggerMovimiento, setTriggerMovimiento] = useState(0);
   const [triggerParcial, setTriggerParcial] = useState(0);
   const [triggerDia, setTriggerDia] = useState(0);
 
   const esAdmin = usuario?.es_admin ?? false;
 
-  // Verificar cierre de caja pendiente al iniciar
+  // Reloj en vivo
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      setReloj(now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }));
+    };
+    update();
+    const id = setInterval(update, 30000);
+    return () => clearInterval(id);
+  }, []);
+
   useEffect(() => {
     invoke<string | null>('verificar_corte_dia_pendiente')
       .then(fecha => setCortePendiente(fecha))
       .catch(() => {});
   }, []);
 
-  // Sync el modo de caja con la fuente de verdad (postgres). Importante por
-  // si el usuario abrió otra pestaña que cambió el modo, o si vino de un
-  // token JWT viejo sin device_uuid.
   useEffect(() => {
     if (isTauri()) return;
     invoke<{ modo: 'espejo' | 'individual'; configurado: boolean } | null>('obtener_modo_caja')
@@ -82,19 +84,14 @@ export default function Dashboard() {
       .catch(() => {});
   }, []);
 
-  // Auto-respaldo diario (una vez al arrancar si no hay uno de hoy)
-  useEffect(() => {
-    invoke('respaldo_auto_si_necesario').catch(() => {});
-  }, []);
+  useEffect(() => { invoke('respaldo_auto_si_necesario').catch(() => {}); }, []);
 
-  // Alerta de stock bajo (recuento al iniciar y al cambiar a Dashboard)
   useEffect(() => {
     invoke<any[]>('listar_productos_stock_bajo')
       .then(lista => setStockBajoCount(lista.length))
       .catch(() => {});
   }, [modulo]);
 
-  // Verificar apertura de caja del día — bloquea operación si no hay
   useEffect(() => {
     obtenerAperturaHoy()
       .then(apertura => setNecesitaApertura(apertura === null))
@@ -102,7 +99,6 @@ export default function Dashboard() {
       .finally(() => setVerificandoApertura(false));
   }, []);
 
-  // Atajos de teclado globales
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'F1') { e.preventDefault(); setModulo('venta'); }
@@ -119,7 +115,6 @@ export default function Dashboard() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  // Cargar stats cuando se abre el dashboard
   useEffect(() => {
     if (modulo === 'dashboard') {
       invoke<EstadisticasDia>('obtener_estadisticas_dia')
@@ -130,315 +125,288 @@ export default function Dashboard() {
 
   const fmt = (n: number) => `$${n.toFixed(2)}`;
 
-  // Menú lateral
-  const menuItems: { id: Modulo; label: string; icon: React.ReactNode; key: string; visible: boolean }[] = [
-    { id: 'venta', label: 'Punto de Venta', icon: <ShoppingCart size={18} />, key: 'F1', visible: tienePermiso('ventas', 'crear') },
-    { id: 'catalogo', label: 'Productos', icon: <Package size={18} />, key: 'F4', visible: tienePermiso('inventario', 'ver') },
-    { id: 'entradas' as Modulo, label: 'Entradas', icon: <PackagePlus size={18} />, key: '', visible: tienePermiso('inventario', 'ver') },
-    { id: 'merma' as Modulo, label: 'Merma', icon: <AlertTriangle size={18} />, key: '', visible: tienePermiso('inventario', 'ver') },
-    { id: 'dashboard', label: 'Dashboard', icon: <BarChart3 size={18} />, key: 'F8', visible: true },
-    { id: 'historial', label: 'Historial Ventas', icon: <History size={18} />, key: 'F7', visible: tienePermiso('ventas', 'ver') },
-    { id: 'cortes', label: 'Cortes de Caja', icon: <DollarSign size={18} />, key: 'F11', visible: true },
-    { id: 'reportes', label: 'Reportes', icon: <TrendingUp size={18} />, key: 'F10', visible: esAdmin },
-    { id: 'usuarios', label: 'Usuarios', icon: <Users size={18} />, key: '', visible: esAdmin },
-    { id: 'ajustes', label: 'Ajustes', icon: <Settings size={18} />, key: '', visible: esAdmin },
+  // ── Menu items con grupos ──
+  type MenuGroup = { label: string; items: { id: Modulo; label: string; icon: React.ReactNode; badge?: number; visible: boolean }[] };
+  const menuGroups: MenuGroup[] = [
+    {
+      label: 'OPERACIÓN',
+      items: [
+        { id: 'venta', label: 'Vender', icon: <ShoppingCart size={22} />, visible: tienePermiso('ventas', 'crear') },
+        { id: 'historial', label: 'Historial', icon: <History size={22} />, visible: tienePermiso('ventas', 'ver') },
+        { id: 'cortes', label: 'Cortes', icon: <DollarSign size={22} />, visible: true },
+      ],
+    },
+    {
+      label: 'INVENTARIO',
+      items: [
+        { id: 'catalogo', label: 'Productos', icon: <Package size={22} />, visible: tienePermiso('inventario', 'ver') },
+        { id: 'entradas', label: 'Entradas', icon: <PackagePlus size={22} />, visible: tienePermiso('inventario', 'ver') },
+        { id: 'merma', label: 'Merma', icon: <AlertTriangle size={22} />, badge: stockBajoCount > 0 ? stockBajoCount : undefined, visible: tienePermiso('inventario', 'ver') },
+      ],
+    },
+    {
+      label: 'ADMIN',
+      items: [
+        { id: 'dashboard', label: 'Dashboard', icon: <BarChart3 size={22} />, visible: true },
+        { id: 'reportes', label: 'Reportes', icon: <TrendingUp size={22} />, visible: esAdmin },
+        { id: 'usuarios', label: 'Usuarios', icon: <Users size={22} />, visible: esAdmin },
+        { id: 'ajustes', label: 'Ajustes', icon: <Settings size={22} />, visible: esAdmin },
+      ],
+    },
   ];
 
   return (
     <>
-    {/* Modal de modo de caja — bloqueante el primer login en este navegador.
-        Aparece ANTES que el modal de apertura para asegurar que el modo esté
-        decidido antes de tocar dinero. */}
-    {debeMostrarModalModo && (
-      <ModalModoCaja
-        bloqueante={!modoConfigurado}
-        modoActual={modoCaja}
-        onSeleccion={(m) => {
-          setModoCajaState(m);
-          setModoConfigurado(true);
-          setForzarModalModo(false);
-        }}
-        onCerrar={() => setForzarModalModo(false)}
-      />
-    )}
-    {/* Modal bloqueante de apertura de caja — debe completarse antes de operar */}
-    {!verificandoApertura && necesitaApertura && !debeMostrarModalModo && (
-      <ModalAperturaCaja
-        bloqueante
-        onSuccess={() => setNecesitaApertura(false)}
-      />
-    )}
-    <div className="pos-dashboard">
-
-      {/* ─── Top Bar ─── */}
-      <div className="pos-topbar" style={{ gridColumn: '1 / -1' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button
-            className="pos-hamburger btn-ghost"
-            aria-label="Menú"
-            onClick={() => setMobileMenuOpen(v => !v)}
-          >
-            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-          <span style={{ fontSize: 22 }}>🍊</span>
-          <span className="pos-topbar-title" style={{ fontWeight: 700, fontSize: 14, color: 'var(--color-text)' }}>
-            PAULÍN PREMIUM FRUITS
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-          {/* Sync indicator */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span className="sync-dot sync-ok" />
-            <span className="pos-hide-mobile" style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Local</span>
-          </div>
-
-          {/* Chip de modo de caja — solo visible en web. Click para cambiar. */}
-          {!isTauri() && modoConfigurado && (
-            <button
-              onClick={() => setForzarModalModo(true)}
-              title={
-                modoCaja === 'espejo'
-                  ? 'Caja compartida con POS desktop. Click para cambiar.'
-                  : 'Caja propia independiente. Click para cambiar.'
-              }
-              className="btn-ghost"
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                fontSize: 11, fontWeight: 600,
-                padding: '4px 10px', borderRadius: 999,
-                background: modoCaja === 'espejo' ? 'rgba(59,130,246,0.12)' : 'rgba(16,185,129,0.12)',
-                color:      modoCaja === 'espejo' ? '#3b82f6' : '#10b981',
-                border: '1px solid currentColor',
-                cursor: 'pointer',
-              }}
-            >
-              <span>{modoCaja === 'espejo' ? '🪞' : '🧾'}</span>
-              <span className="pos-hide-mobile">
-                {modoCaja === 'espejo' ? 'Caja espejo' : 'Caja propia'}
-              </span>
-            </button>
-          )}
-
-          {/* Usuario */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '4px 10px', background: 'var(--color-surface-2)',
-            borderRadius: 8, border: '1px solid var(--color-border)',
-          }}>
-            <div style={{
-              width: 24, height: 24, borderRadius: '50%', background: 'var(--color-primary)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0,
-            }}>
-              {usuario?.nombre_completo.charAt(0).toUpperCase()}
-            </div>
-            <span className="pos-hide-mobile" style={{ fontSize: 13, fontWeight: 600 }}>{usuario?.nombre_completo}</span>
-            <span className="pos-hide-mobile" style={{
-              fontSize: 10, padding: '1px 6px', borderRadius: 10,
-              background: esAdmin ? 'rgba(216,56,77,0.12)' : 'rgba(158,122,126,0.12)',
-              color: esAdmin ? 'var(--color-primary)' : 'var(--color-text-muted)',
-              fontWeight: 600,
-            }}>
-              {usuario?.rol_nombre}
-            </span>
-          </div>
-
-          <button className="btn btn-ghost btn-sm" onClick={logout}>
-            <LogOut size={14} /> <span className="pos-hide-mobile">F12</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Backdrop para cerrar el menú al tocar afuera (solo mobile) */}
-      {mobileMenuOpen && (
-        <div className="pos-sidebar-backdrop" onClick={() => setMobileMenuOpen(false)} />
+      {debeMostrarModalModo && (
+        <ModalModoCaja
+          bloqueante={!modoConfigurado}
+          modoActual={modoCaja}
+          onSeleccion={(m) => { setModoCajaState(m); setModoConfigurado(true); setForzarModalModo(false); }}
+          onCerrar={() => setForzarModalModo(false)}
+        />
+      )}
+      {!verificandoApertura && necesitaApertura && !debeMostrarModalModo && (
+        <ModalAperturaCaja bloqueante onSuccess={() => setNecesitaApertura(false)} />
       )}
 
-      {/* ─── Sidebar ─── */}
-      <div className={`pos-sidebar${mobileMenuOpen ? ' open' : ''}`} style={{
-        background: 'var(--color-surface)',
-        borderRight: '1px solid var(--color-border)',
-        display: 'flex', flexDirection: 'column',
-        padding: '8px',
-        gap: 2,
-        overflow: 'auto',
-      }}>
-        {menuItems.filter(m => m.visible).map((item) => (
-          <button
-            key={item.id}
-            onClick={() => { setModulo(item.id); setMobileMenuOpen(false); }}
-            style={{
+      <div className="pos-dashboard">
+        {/* ─── Sidebar ─── */}
+        <div style={{
+          display: 'flex', flexDirection: 'column',
+          background: 'var(--color-surface)',
+          borderRight: '1.5px solid var(--color-border)',
+          overflow: 'auto',
+        }}>
+          {/* Brand header */}
+          <div style={{
+            padding: '16px 16px 12px',
+            display: 'flex', alignItems: 'center', gap: 10,
+            borderBottom: '1px solid var(--color-border)',
+          }}>
+            <span style={{ fontSize: 28 }}>🍊</span>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--color-primary)', lineHeight: 1.1 }}>PAULÍN</div>
+              <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--color-text-dim)', letterSpacing: '1px' }}>PREMIUM FRUITS</div>
+            </div>
+          </div>
+
+          {/* Menu groups */}
+          <div style={{ flex: 1, padding: '8px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {menuGroups.map((group) => {
+              const visible = group.items.filter(i => i.visible);
+              if (visible.length === 0) return null;
+              return (
+                <div key={group.label}>
+                  <div style={{
+                    fontSize: 10, fontWeight: 700, color: 'var(--color-text-dim)',
+                    padding: '12px 12px 4px', letterSpacing: '1px',
+                  }}>
+                    {group.label}
+                  </div>
+                  {visible.map(item => (
+                    <button
+                      key={item.id}
+                      onClick={() => setModulo(item.id)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '12px 14px', borderRadius: 'var(--radius-md)',
+                        border: 'none', cursor: 'pointer',
+                        fontSize: 14, fontWeight: 600,
+                        width: '100%', textAlign: 'left',
+                        minHeight: 48,
+                        transition: 'all 0.08s',
+                        background: modulo === item.id ? 'var(--color-primary)' : 'transparent',
+                        color: modulo === item.id ? '#fff' : 'var(--color-text-muted)',
+                      }}
+                    >
+                      {item.icon}
+                      <span style={{ flex: 1 }}>{item.label}</span>
+                      {item.badge && (
+                        <span style={{
+                          background: modulo === item.id ? 'rgba(255,255,255,0.3)' : 'var(--color-danger)',
+                          color: '#fff', fontSize: 11, fontWeight: 700,
+                          padding: '2px 8px', borderRadius: 12, minWidth: 22, textAlign: 'center',
+                        }}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Footer: user + clock + logout */}
+          <div style={{
+            padding: '12px', borderTop: '1px solid var(--color-border)',
+            display: 'flex', flexDirection: 'column', gap: 8,
+          }}>
+            {/* Clock */}
+            <div style={{ textAlign: 'center' }}>
+              <span className="mono" style={{ fontSize: 28, fontWeight: 800, color: 'var(--color-text)' }}>
+                {reloj}
+              </span>
+            </div>
+
+            {/* User info */}
+            <div style={{
               display: 'flex', alignItems: 'center', gap: 10,
-              padding: '10px 12px', borderRadius: 8, border: 'none',
-              cursor: 'pointer', fontSize: 13, fontWeight: 600,
-              transition: 'all 0.1s',
-              textAlign: 'left', width: '100%',
-              background: modulo === item.id ? 'var(--color-primary-soft)' : 'transparent',
-              color: modulo === item.id ? 'var(--color-primary)' : 'var(--color-text-muted)',
-            }}
-          >
-            {item.icon}
-            <span style={{ flex: 1 }}>{item.label}</span>
-            {item.key && (
-              <span style={{ fontSize: 10, opacity: 0.5 }}>{item.key}</span>
-            )}
-          </button>
-        ))}
-      </div>
+              padding: '8px 10px', background: 'var(--color-surface-2)',
+              borderRadius: 'var(--radius-md)',
+            }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: '50%',
+                background: 'var(--color-primary)', color: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 14, fontWeight: 700, flexShrink: 0,
+              }}>
+                {usuario?.nombre_completo.charAt(0).toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {usuario?.nombre_completo}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>{usuario?.rol_nombre}</div>
+              </div>
+            </div>
 
-      {/* ─── Contenido ─── */}
-      <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0 }}>
-
-        {/* Alerta de cierre de caja pendiente */}
-        {cortePendiente && (
-          <div style={{
-            padding: '10px 20px', background: 'rgba(245,158,11,0.12)',
-            borderBottom: '1px solid rgba(245,158,11,0.4)',
-            display: 'flex', alignItems: 'center', gap: 12,
-            flexShrink: 0, flexWrap: 'wrap',
-          }}>
-            <span style={{ fontSize: 15 }}>⚠️</span>
-            <span style={{ fontSize: 13, fontWeight: 600, flex: '1 1 200px', color: 'var(--color-warning)' }}>
-              No se hizo el cierre de caja del {cortePendiente}. Realiza el cierre antes de continuar.
-            </span>
+            {/* Logout */}
             <button
-              className="btn btn-sm"
-              style={{ background: 'var(--color-warning)', color: '#fff', border: 'none' }}
-              onClick={() => { setModulo('cortes'); setTriggerDia(n => n + 1); }}
+              className="btn btn-danger"
+              onClick={logout}
+              style={{ width: '100%', justifyContent: 'center', gap: 8 }}
             >
-              Hacer corte ahora
-            </button>
-            <button
-              className="btn btn-ghost btn-sm"
-              style={{ fontSize: 11 }}
-              onClick={() => setCortePendiente(null)}
-            >
-              Ignorar
+              <LogOut size={18} />
+              Cerrar Sesión
             </button>
           </div>
-        )}
+        </div>
 
-        {/* Alerta de stock bajo */}
-        {stockBajoCount > 0 && !stockAlertDismiss && tienePermiso('inventario', 'ver') && (
-          <div style={{
-            padding: '10px 20px', background: 'rgba(239,68,68,0.10)',
-            borderBottom: '1px solid rgba(239,68,68,0.4)',
-            display: 'flex', alignItems: 'center', gap: 12,
-            flexShrink: 0, flexWrap: 'wrap',
-          }}>
-            <span style={{ fontSize: 15 }}>📉</span>
-            <span style={{ fontSize: 13, fontWeight: 600, flex: '1 1 200px', color: 'var(--color-danger)' }}>
-              {stockBajoCount} producto{stockBajoCount !== 1 ? 's' : ''} con stock bajo o agotado.
-            </span>
-            <button
-              className="btn btn-sm"
-              style={{ background: 'var(--color-danger)', color: '#fff', border: 'none' }}
-              onClick={() => setModulo('catalogo')}
-            >
-              Ver inventario
-            </button>
-            <button
-              className="btn btn-ghost btn-sm"
-              style={{ fontSize: 11 }}
-              onClick={() => setStockAlertDismiss(true)}
-            >
-              Ignorar
-            </button>
+        {/* ─── Contenido ─── */}
+        <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0 }}>
+          {/* Alertas */}
+          {cortePendiente && (
+            <div style={{
+              padding: '10px 20px', background: 'var(--color-warning-soft)',
+              borderBottom: '2px solid var(--color-warning)',
+              display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
+            }}>
+              <span style={{ fontSize: 18 }}>⚠️</span>
+              <span style={{ fontSize: 14, fontWeight: 700, flex: 1, color: '#8b6508' }}>
+                Cierre de caja pendiente del {cortePendiente}
+              </span>
+              <button className="btn btn-sm"
+                style={{ background: 'var(--color-warning)', color: '#fff', border: 'none' }}
+                onClick={() => { setModulo('cortes'); setTriggerDia(n => n + 1); }}>
+                Hacer corte
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setCortePendiente(null)}>
+                ✕
+              </button>
+            </div>
+          )}
+
+          {stockBajoCount > 0 && !stockAlertDismiss && tienePermiso('inventario', 'ver') && (
+            <div style={{
+              padding: '10px 20px', background: 'var(--color-danger-soft)',
+              borderBottom: '2px solid var(--color-danger)',
+              display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
+            }}>
+              <span style={{ fontSize: 18 }}>📉</span>
+              <span style={{ fontSize: 14, fontWeight: 700, flex: 1, color: 'var(--color-danger)' }}>
+                {stockBajoCount} producto{stockBajoCount !== 1 ? 's' : ''} con stock bajo
+              </span>
+              <button className="btn btn-sm"
+                style={{ background: 'var(--color-danger)', color: '#fff', border: 'none' }}
+                onClick={() => setModulo('catalogo')}>
+                Ver inventario
+              </button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setStockAlertDismiss(true)}>
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* Módulos */}
+          <div style={{ display: modulo === 'venta' ? 'flex' : 'none', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+            <PuntoDeVenta />
           </div>
-        )}
-
-        {/* Módulos con persistencia de estado (keep-alive via CSS) */}
-        <div style={{ display: modulo === 'venta' ? 'flex' : 'none', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-          <PuntoDeVenta />
+          <div style={{ display: modulo === 'catalogo' ? 'flex' : 'none', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+            <Catalogo />
+          </div>
+          {modulo === 'usuarios' && <UsuariosPage />}
+          {modulo === 'dashboard' && (
+            <DashboardHome stats={stats} fmt={fmt} stockBajo={stockBajoCount} onVerInventario={() => setModulo('catalogo')} />
+          )}
+          {modulo === 'historial' && <HistorialVentas />}
+          {modulo === 'reportes' && <Reportes />}
+          {modulo === 'merma' && <Merma />}
+          {modulo === 'entradas' && <Entradas />}
+          <div style={{ display: modulo === 'cortes' ? 'flex' : 'none', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+            <CortesCaja
+              triggerMovimiento={triggerMovimiento}
+              triggerParcial={triggerParcial}
+              triggerDia={triggerDia}
+              fechaObjetivoDia={cortePendiente}
+              onCorteDiaHecho={() => setCortePendiente(null)}
+            />
+          </div>
+          {modulo === 'ajustes' && <Ajustes />}
         </div>
-        <div style={{ display: modulo === 'catalogo' ? 'flex' : 'none', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-          <Catalogo />
-        </div>
-
-        {/* Módulos sin persistencia necesaria (renderizado condicional normal) */}
-        {modulo === 'usuarios' && <UsuariosPage />}
-        {modulo === 'dashboard' && (
-          <DashboardHome stats={stats} fmt={fmt} stockBajo={stockBajoCount} onVerInventario={() => setModulo('catalogo')} />
-        )}
-        {modulo === 'historial' && <HistorialVentas />}
-        {modulo === 'reportes' && <Reportes />}
-        {modulo === 'merma' && <Merma />}
-        {modulo === 'entradas' && <Entradas />}
-        <div style={{ display: modulo === 'cortes' ? 'flex' : 'none', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-          <CortesCaja
-            triggerMovimiento={triggerMovimiento}
-            triggerParcial={triggerParcial}
-            triggerDia={triggerDia}
-            fechaObjetivoDia={cortePendiente}
-            onCorteDiaHecho={() => setCortePendiente(null)}
-          />
-        </div>
-        {modulo === 'ajustes' && <Ajustes />}
       </div>
-    </div>
     </>
   );
 }
 
 // ─── Dashboard Home ───────────────────────────────────────
-
-function DashboardHome({ stats, fmt, stockBajo, onVerInventario }: { stats: EstadisticasDia | null; fmt: (n: number) => string; stockBajo: number; onVerInventario: () => void }) {
+function DashboardHome({ stats, fmt, stockBajo, onVerInventario }: {
+  stats: EstadisticasDia | null; fmt: (n: number) => string;
+  stockBajo: number; onVerInventario: () => void;
+}) {
   if (!stats) {
     return (
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        height: '100%', color: 'var(--color-text-dim)',
-      }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--color-text-dim)' }}>
         <span className="animate-pulse-soft">Cargando estadísticas...</span>
       </div>
     );
   }
 
   return (
-    <div className="animate-fade-in" style={{ padding: 24, overflow: 'auto' }}>
-      <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 20, color: 'var(--color-text)' }}>
-        📊 Resumen del Día
-      </h2>
+    <div className="animate-fade-in" style={{ padding: 28, overflow: 'auto' }}>
+      <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 24 }}>📊 Resumen del Día</h2>
 
       {stockBajo > 0 && (
         <div className="card" style={{
-          padding: 14, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12,
-          background: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.3)',
+          padding: 16, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12,
+          background: 'var(--color-danger-soft)', borderColor: 'var(--color-danger)',
         }}>
-          <span style={{ fontSize: 20 }}>⚠️</span>
+          <span style={{ fontSize: 22 }}>⚠️</span>
           <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-danger)' }}>
-              Stock bajo: {stockBajo} producto{stockBajo !== 1 ? 's' : ''} necesitan reorden
-            </p>
-            <p style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>
-              Revisa el inventario para planificar tu próxima compra.
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-danger)' }}>
+              {stockBajo} producto{stockBajo !== 1 ? 's' : ''} con stock bajo
             </p>
           </div>
           <button className="btn btn-sm" style={{ background: 'var(--color-danger)', color: '#fff', border: 'none' }}
-            onClick={onVerInventario}>
-            Ver inventario
-          </button>
+            onClick={onVerInventario}>Ver inventario</button>
         </div>
       )}
 
-      {/* Cards de stats */}
       <div className="dashboard-stats-grid" style={{ marginBottom: 24 }}>
         <StatCard label="Total Ventas" value={fmt(stats.total_ventas)} color="var(--color-success)" />
         <StatCard label="Transacciones" value={String(stats.num_transacciones)} color="var(--color-primary)" />
-        <StatCard label="Producto Top" value={stats.producto_top_nombre || '—'} sub={stats.producto_top_cantidad > 0 ? `${stats.producto_top_cantidad} unidades` : ''} color="var(--color-warning)" isText />
+        <StatCard label="Producto Top" value={stats.producto_top_nombre || '—'} sub={stats.producto_top_cantidad > 0 ? `${stats.producto_top_cantidad} unidades` : ''} color="var(--color-secondary-h)" isText />
         <StatCard label="Promedio / Venta" value={stats.num_transacciones > 0 ? fmt(stats.total_ventas / stats.num_transacciones) : '$0.00'} color="var(--color-text-muted)" />
       </div>
 
-      {/* Desglose por método */}
-      <div className="card" style={{ padding: 20 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, color: 'var(--color-text-muted)' }}>
+      <div className="card" style={{ padding: 24 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 20, color: 'var(--color-text-muted)' }}>
           DESGLOSE POR MÉTODO DE PAGO
         </h3>
         <div className="dashboard-payment-grid">
           <PaymentBar label="Efectivo" value={stats.efectivo} total={stats.total_ventas} color="var(--color-success)" fmt={fmt} />
           <PaymentBar label="Tarjeta" value={stats.tarjeta} total={stats.total_ventas} color="var(--color-primary)" fmt={fmt} />
-          <PaymentBar label="Transferencia" value={stats.transferencia} total={stats.total_ventas} color="var(--color-warning)" fmt={fmt} />
+          <PaymentBar label="Transferencia" value={stats.transferencia} total={stats.total_ventas} color="var(--color-secondary-h)" fmt={fmt} />
         </div>
       </div>
     </div>
@@ -447,22 +415,11 @@ function DashboardHome({ stats, fmt, stockBajo, onVerInventario }: { stats: Esta
 
 function StatCard({ label, value, sub, color, isText }: { label: string; value: string; sub?: string; color: string; isText?: boolean }) {
   return (
-    <div className="card" style={{ padding: 16, display: 'flex', flexDirection: 'column' }}>
-      <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--color-text-dim)', textTransform: 'uppercase', marginBottom: 6 }}>
-        {label}
-      </p>
-      <p className={isText ? '' : 'mono'} style={{ 
-        fontSize: isText ? 14 : 24, 
-        fontWeight: 800, 
-        color,
-        ...(isText ? {
-          display: '-webkit-box',
-          WebkitLineClamp: 3,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-          wordBreak: 'break-word',
-          lineHeight: 1.3
-        } : {})
+    <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column' }}>
+      <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-dim)', textTransform: 'uppercase', marginBottom: 8 }}>{label}</p>
+      <p className={isText ? '' : 'mono'} style={{
+        fontSize: isText ? 15 : 28, fontWeight: 800, color,
+        ...(isText ? { lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } : {}),
       }}>{value}</p>
       <div style={{ flex: 1 }} />
       {sub && <p style={{ fontSize: 12, color: 'var(--color-text-dim)', marginTop: 8 }}>{sub}</p>}
@@ -477,16 +434,13 @@ function PaymentBar({ label, value, total, color, fmt }: {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)' }}>{label}</span>
-        <span className="mono" style={{ fontSize: 13, fontWeight: 700, color }}>{fmt(value)}</span>
+        <span style={{ fontSize: 14, fontWeight: 600 }}>{label}</span>
+        <span className="mono" style={{ fontSize: 14, fontWeight: 700, color }}>{fmt(value)}</span>
       </div>
-      <div style={{ height: 8, background: 'var(--color-surface-2)', borderRadius: 4, overflow: 'hidden' }}>
-        <div style={{
-          height: '100%', borderRadius: 4, background: color,
-          width: `${pct}%`, transition: 'width 0.5s ease',
-        }} />
+      <div style={{ height: 10, background: 'var(--color-surface-2)', borderRadius: 5, overflow: 'hidden' }}>
+        <div style={{ height: '100%', borderRadius: 5, background: color, width: `${pct}%`, transition: 'width 0.5s ease' }} />
       </div>
-      <p style={{ fontSize: 11, color: 'var(--color-text-dim)', marginTop: 2 }}>{pct.toFixed(0)}%</p>
+      <p style={{ fontSize: 12, color: 'var(--color-text-dim)', marginTop: 4 }}>{pct.toFixed(0)}%</p>
     </div>
   );
 }
