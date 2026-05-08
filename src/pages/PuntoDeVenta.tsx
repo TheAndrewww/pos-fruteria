@@ -166,16 +166,21 @@ export default function PuntoDeVenta() {
 
   // ──── Vista principal ────
   return (
-    <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-      {/* ═══ PANEL IZQUIERDO: Grid de productos ═══ */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+    <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: 12, padding: 12, background: 'var(--color-bg)' }}>
 
+      {/* ═══ MÓDULO IZQUIERDO: Grid de productos ═══ */}
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0,
+        background: 'var(--color-surface)', borderRadius: 16,
+        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+        overflow: 'hidden',
+      }}>
         {/* Product grid */}
         <div style={{
-          flex: 1, overflow: 'auto', padding: 12,
+          flex: 1, overflow: 'auto', padding: 16,
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-          gap: 10, alignContent: 'start',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+          gap: 12, alignContent: 'start',
         }}>
           {productosMostrados.map(p => (
             <button
@@ -183,15 +188,20 @@ export default function PuntoDeVenta() {
               className={`product-tile ${flashId === p.id ? 'animate-add-flash' : ''}`}
               onClick={() => handleAddProduct(p)}
               style={{
-                background: (p as any).color_boton ? `${(p as any).color_boton}15` : 'var(--color-surface)',
-                borderColor: (p as any).color_boton ? `${(p as any).color_boton}40` : 'var(--color-border)',
+                background: (p as any).color_boton ? `${(p as any).color_boton}12` : 'var(--color-surface)',
+                borderColor: (p as any).color_boton ? `${(p as any).color_boton}30` : 'var(--color-border)',
+                borderRadius: 14, minHeight: 130,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
               }}
             >
-              <span className="product-tile-emoji">{(p as any).emoji || '🍎'}</span>
-              <span className="product-tile-name">{p.nombre}</span>
-              <span className="product-tile-price">${p.precio_venta.toFixed(0)}<span style={{ fontSize: 10, fontWeight: 500, color: 'var(--color-text-dim)' }}>/{(p as any).unidad || 'kg'}</span></span>
+              <span className="product-tile-emoji" style={{ fontSize: 36 }}>{(p as any).emoji || '🍎'}</span>
+              <span className="product-tile-name" style={{ fontSize: 13, fontWeight: 700 }}>{p.nombre}</span>
+              <span className="product-tile-price" style={{ fontSize: 16, fontWeight: 800 }}>
+                ${p.precio_venta.toFixed(0)}
+                <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--color-text-dim)' }}>/{(p as any).unidad || 'kg'}</span>
+              </span>
               {(p as any).precio_mayoreo > 0 && (
-                <span style={{ fontSize: 11, color: 'var(--color-accent)', fontWeight: 600 }}>
+                <span style={{ fontSize: 10, color: 'var(--color-accent)', fontWeight: 700 }}>
                   May: ${((p as any).precio_mayoreo).toFixed(0)}/{(p as any).unidad || 'kg'}
                 </span>
               )}
@@ -206,143 +216,151 @@ export default function PuntoDeVenta() {
           ))}
           {productosMostrados.length === 0 && (
             <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: 60, color: 'var(--color-text-dim)' }}>
-              {'No hay productos activos'}
+              No hay productos activos
             </div>
           )}
         </div>
       </div>
 
-      {/* ═══ PANEL DERECHO: Carrito ═══ */}
+      {/* ═══ MÓDULO DERECHO: Carrito ═══ */}
       <div style={{
-        width: 440, display: 'flex', flexDirection: 'row',
-        background: 'var(--color-surface)',
-        borderLeft: '1.5px solid var(--color-border)',
-        minHeight: 0, flexShrink: 0,
+        width: 380, display: 'flex', flexDirection: 'row',
+        minHeight: 0, flexShrink: 0, gap: 8,
       }}>
-        {/* Cart content */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-
-        {/* Cart header */}
+        {/* Cart module */}
         <div style={{
-          padding: '8px 16px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+          flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0,
+          background: 'var(--color-surface)', borderRadius: 16,
+          boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+          overflow: 'hidden',
         }}>
-          <span style={{ fontWeight: 700, fontSize: 16 }}>
-            🛒 <span className="mono" style={{ color: 'var(--color-primary)' }}>({numItems()})</span>
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {/* Toggle Menudeo / Mayoreo */}
-            <button
-              onClick={() => toggleModoMayoreo()}
-              style={{
-                padding: '5px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
-                fontSize: 12, fontWeight: 700, transition: 'all 0.15s',
-                background: modoMayoreo ? 'var(--color-accent)' : 'var(--color-surface-2)',
-                color: modoMayoreo ? '#fff' : 'var(--color-text-muted)',
+          {/* Cart header */}
+          <div style={{
+            padding: '12px 16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+            borderBottom: '1px solid var(--color-border)',
+            background: 'var(--color-surface)',
+          }}>
+            <span style={{ fontWeight: 800, fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
+              🛒 Carrito
+              <span className="mono" style={{
+                color: 'var(--color-primary)', fontSize: 12,
+                background: 'var(--color-primary-soft)', padding: '2px 8px', borderRadius: 10,
               }}>
-              {modoMayoreo ? '📦 Mayoreo' : '🏷️ Menudeo'}
-            </button>
-            {items.length > 0 && (
-              <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-danger)' }}
-                onClick={() => limpiarCarrito()}>
-                Vaciar
+                {numItems()}
+              </span>
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button
+                onClick={() => toggleModoMayoreo()}
+                style={{
+                  padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
+                  fontSize: 11, fontWeight: 700, transition: 'all 0.15s',
+                  background: modoMayoreo ? 'var(--color-accent)' : 'var(--color-surface-2)',
+                  color: modoMayoreo ? '#fff' : 'var(--color-text-muted)',
+                }}>
+                {modoMayoreo ? '📦 Mayoreo' : '🏷️ Menudeo'}
               </button>
+              {items.length > 0 && (
+                <button className="btn btn-ghost btn-sm" style={{ color: 'var(--color-danger)', fontSize: 11 }}
+                  onClick={() => limpiarCarrito()}>
+                  Vaciar
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Cart items */}
+          <div style={{ flex: 1, overflow: 'auto' }}>
+            {items.length === 0 ? (
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                height: '100%', color: 'var(--color-text-dim)', flexDirection: 'column', gap: 8,
+              }}>
+                <ShoppingCart size={36} strokeWidth={1.2} />
+                <p style={{ fontSize: 13 }}>Toca un producto para agregar</p>
+              </div>
+            ) : (
+              items.map((item, i) => (
+                <div key={`${item.producto.id}-${i}`} style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '10px 14px', borderBottom: '1px solid var(--color-border)',
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700 }}>
+                      {(item.producto as any).emoji || '🍎'} {item.producto.nombre}
+                    </div>
+                    <div className="mono" style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>
+                      {fmt(item.precioFinal)} × {item.cantidad} {(item.producto as any).unidad || 'kg'}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <button className="btn btn-ghost" style={{ padding: 4, minHeight: 36, minWidth: 36 }}
+                      onClick={() => cambiarCantidad(i, item.cantidad - 1)}>
+                      <Minus size={16} />
+                    </button>
+                    <span className="mono" style={{ fontWeight: 800, minWidth: 30, textAlign: 'center', fontSize: 15 }}>
+                      {item.cantidad}
+                    </span>
+                    <button className="btn btn-ghost" style={{ padding: 4, minHeight: 36, minWidth: 36 }}
+                      onClick={() => cambiarCantidad(i, item.cantidad + 1)}>
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                  <div className="mono" style={{ fontWeight: 800, fontSize: 15, minWidth: 65, textAlign: 'right' }}>
+                    {fmt(item.subtotal)}
+                  </div>
+                  <button style={{
+                    border: 'none', background: 'transparent', cursor: 'pointer',
+                    padding: 6, color: 'var(--color-danger)',
+                  }} onClick={() => quitarProducto(i)}>
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))
             )}
           </div>
-        </div>
 
-        {/* Cart items */}
-        <div style={{ flex: 1, overflow: 'auto' }}>
-          {items.length === 0 ? (
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              height: '100%', color: 'var(--color-text-dim)', flexDirection: 'column', gap: 8,
-            }}>
-              <ShoppingCart size={40} strokeWidth={1.2} />
-              <p style={{ fontSize: 14 }}>Toca un producto</p>
-            </div>
-          ) : (
-            items.map((item, i) => (
-              <div key={`${item.producto.id}-${i}`} style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '10px 14px', borderBottom: '1px solid var(--color-border)',
-              }}>
-                {/* Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700 }}>
-                    {(item.producto as any).emoji || '🍎'} {item.producto.nombre}
-                  </div>
-                  <div className="mono" style={{ fontSize: 12, color: 'var(--color-text-dim)' }}>
-                    {fmt(item.precioFinal)} × {item.cantidad} {(item.producto as any).unidad || 'kg'}
-                  </div>
-                </div>
-                {/* Quantity controls */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <button className="btn btn-ghost" style={{ padding: 6, minHeight: 40, minWidth: 40 }}
-                    onClick={() => cambiarCantidad(i, item.cantidad - 1)}>
-                    <Minus size={18} />
-                  </button>
-                  <span className="mono" style={{ fontWeight: 800, minWidth: 36, textAlign: 'center', fontSize: 16 }}>
-                    {item.cantidad}
-                  </span>
-                  <button className="btn btn-ghost" style={{ padding: 6, minHeight: 40, minWidth: 40 }}
-                    onClick={() => cambiarCantidad(i, item.cantidad + 1)}>
-                    <Plus size={18} />
-                  </button>
-                </div>
-                {/* Subtotal */}
-                <div className="mono" style={{ fontWeight: 800, fontSize: 16, minWidth: 70, textAlign: 'right' }}>
-                  {fmt(item.subtotal)}
-                </div>
-                {/* Remove */}
-                <button style={{
-                  border: 'none', background: 'transparent', cursor: 'pointer',
-                  padding: 8, color: 'var(--color-danger)',
-                }} onClick={() => quitarProducto(i)}>
-                  <Trash2 size={18} />
-                </button>
+          {/* Total + Cobrar module */}
+          <div style={{
+            padding: '14px 14px 16px', flexShrink: 0,
+            borderTop: '2px solid var(--color-border)',
+            background: 'var(--color-surface)',
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: 10 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-dim)', textTransform: 'uppercase', letterSpacing: 1 }}>
+                TOTAL
+              </span>
+              <div className="mono" style={{ fontSize: 42, fontWeight: 800, color: 'var(--color-text)', letterSpacing: '-2px' }}>
+                {fmt(total())}
               </div>
-            ))
-          )}
-        </div>
-
-
-
-        {/* Total + Cobrar */}
-        <div style={{ padding: '14px 14px 16px', flexShrink: 0, borderTop: '2px solid var(--color-border)' }}>
-          <div style={{ textAlign: 'center', marginBottom: 12 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-text-dim)', textTransform: 'uppercase', letterSpacing: 1 }}>
-              TOTAL
-            </span>
-            <div className="mono" style={{ fontSize: 48, fontWeight: 800, color: 'var(--color-text)', letterSpacing: '-2px' }}>
-              {fmt(total())}
             </div>
+            <button
+              className="btn btn-xl"
+              style={{
+                width: '100%', justifyContent: 'center',
+                background: items.length > 0 ? 'var(--color-primary)' : 'var(--color-surface-2)',
+                color: items.length > 0 ? '#fff' : 'var(--color-text-dim)',
+                fontSize: 18, fontWeight: 800, minHeight: 56,
+                borderRadius: 14, transition: 'all 0.15s',
+                boxShadow: items.length > 0 ? '0 4px 12px rgba(63,163,77,0.3)' : 'none',
+              }}
+              disabled={items.length === 0 || procesando}
+              onClick={() => {
+                setShowCobro(true);
+                setMontoRecibido(0);
+              }}
+            >
+              {procesando ? 'Procesando...' : `💰 Cobrar ${fmt(total())}`}
+            </button>
           </div>
-          <button
-            className="btn btn-xl"
-            style={{
-              width: '100%', justifyContent: 'center',
-              background: 'var(--color-primary)', color: '#fff',
-              fontSize: 20, fontWeight: 800, minHeight: 64,
-              borderRadius: 'var(--radius-lg)',
-            }}
-            disabled={items.length === 0 || procesando}
-            onClick={() => {
-              setShowCobro(true);
-              setMontoRecibido(0);
-            }}
-          >
-            {procesando ? 'Procesando...' : `💰 Cobrar ${fmt(total())}`}
-          </button>
         </div>
-        </div>{/* end cart content */}
 
-        {/* Vertical tab sidebar — RIGHT */}
+        {/* Tab sidebar — RIGHT */}
         <div style={{
           width: 56, display: 'flex', flexDirection: 'column',
-          background: 'var(--color-bg)', borderLeft: '1px solid var(--color-border)',
-          padding: '8px 0', gap: 6, alignItems: 'center',
-          overflowY: 'auto', flexShrink: 0,
+          gap: 6, alignItems: 'center', paddingTop: 4,
+          flexShrink: 0,
         }}>
           {tabs.map((tab, idx) => {
             const isActive = tab.id === tabActivaId;
@@ -352,25 +370,24 @@ export default function PuntoDeVenta() {
                 onClick={() => activarTab(tab.id)}
                 style={{
                   width: 52, height: 52, border: 'none', cursor: 'pointer',
-                  borderRadius: 10, display: 'flex', flexDirection: 'column',
+                  borderRadius: 14, display: 'flex', flexDirection: 'column',
                   alignItems: 'center', justifyContent: 'center', gap: 3,
                   background: isActive ? 'var(--color-primary)' : 'var(--color-surface)',
                   color: isActive ? '#fff' : 'var(--color-text-muted)',
                   transition: 'all 0.12s', position: 'relative',
-                  boxShadow: isActive ? '0 2px 8px rgba(63,163,77,0.3)' : '0 1px 2px rgba(0,0,0,0.06)',
+                  boxShadow: isActive ? '0 3px 10px rgba(63,163,77,0.3)' : '0 1px 3px rgba(0,0,0,0.06)',
                 }}>
                 <span style={{ fontSize: 15, fontWeight: 800, lineHeight: 1 }}>{idx + 1}</span>
                 {count > 0 && (
                   <span style={{
                     fontSize: 9, fontWeight: 700, lineHeight: 1,
-                    opacity: isActive ? 0.85 : 1,
-                    color: isActive ? '#fff' : 'var(--color-primary)',
+                    color: isActive ? 'rgba(255,255,255,0.85)' : 'var(--color-primary)',
                   }}>{count} 🛒</span>
                 )}
                 {tabs.length > 1 && !isActive && (
                   <span onClick={(e) => { e.stopPropagation(); cerrarTab(tab.id); }}
                     style={{
-                      position: 'absolute', top: 1, right: 3,
+                      position: 'absolute', top: 2, right: 5,
                       fontSize: 9, opacity: 0.4, lineHeight: 1,
                     }}>✕</span>
                 )}
@@ -380,18 +397,17 @@ export default function PuntoDeVenta() {
           <button onClick={() => nuevaTab()}
             style={{
               width: 52, height: 52, border: 'none',
-              borderRadius: 10, cursor: 'pointer',
+              borderRadius: 14, cursor: 'pointer',
               background: 'var(--color-surface)',
               color: 'var(--color-primary)',
               fontSize: 20, fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
             }} title="Nuevo carrito">
             +
           </button>
         </div>
-
-      </div>{/* end panel derecho */}
+      </div>
 
       {/* ═══ MODAL COBRO (efectivo) ═══ */}
       {showCobro && (
