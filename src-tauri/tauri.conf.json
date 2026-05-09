@@ -43,7 +43,7 @@
       "endpoints": [
         "https://github.com/TheAndrewww/pos-fruteria/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDc5RDU5NDcwQjY5MzQ0M0IKUldRN1JKTzJjSlRWZVh1bFgzQkVjZkVBVzJUaFZJODY5UVk3UFdPY2ExSnE1bHNMeWcvNkdlcWoK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDBCNjYwMzQzQThFOTM2OEUKUldTT051bW9Rd05tQzVIVjI3VkdtdHgrSFE0RGl4cmVrcllvR3c2UFhBTmEyS2NVYUc0Qmx1ZmgK",
       "windows": {
         "installMode": "passive"
       }
