@@ -5,7 +5,7 @@ import { create } from 'zustand';
 import { invoke } from '../lib/invokeCompat';
 import type { Producto } from './productStore';
 
-export type MetodoPago = 'efectivo' | 'tarjeta' | 'transferencia';
+export type MetodoPago = 'efectivo';
 export type ModoTab = 'venta' | 'presupuesto';
 
 export interface PresupuestoOrigen {
@@ -46,8 +46,6 @@ export interface EstadisticasDia {
   total_ventas: number;
   num_transacciones: number;
   efectivo: number;
-  tarjeta: number;
-  transferencia: number;
   producto_top_nombre: string | null;
   producto_top_cantidad: number;
 }
@@ -63,7 +61,6 @@ export interface TabVenta {
   presupuestoOrigen: PresupuestoOrigen | null;
   notasPresupuesto: string;
   vigenciaPresupuesto: number;
-  modoMayoreo: boolean;
 }
 
 function generarId(): string {
@@ -85,7 +82,6 @@ function nuevaTabVacia(nombre: string, modo: ModoTab = 'venta'): TabVenta {
     presupuestoOrigen: null,
     notasPresupuesto: '',
     vigenciaPresupuesto: 7,
-    modoMayoreo: false,
   };
 }
 
@@ -117,11 +113,9 @@ interface VentaState {
   agregarProducto: (producto: Producto) => void;
   quitarProducto: (index: number) => void;
   cambiarCantidad: (index: number, cantidad: number) => void;
+  cambiarPrecio: (index: number, nuevoPrecio: number) => void;
   aplicarDescuento: (index: number, porcentaje: number, autorizadoPor?: number | null) => void;
   limpiarCarrito: () => void;
-
-  // Modo precio
-  toggleModoMayoreo: () => void;
 
   // Cliente (pestaña activa)
   seleccionarCliente: (cliente: Cliente | null) => void;
@@ -238,10 +232,7 @@ export const useVentaStore = create<VentaState>((set, get) => {
 
     agregarProducto: (producto) => {
       updateActiva(t => {
-        // Usar precio mayoreo si el modo está activo y el producto tiene precio mayoreo
-        const precioBase = (t.modoMayoreo && (producto as any).precio_mayoreo > 0)
-          ? (producto as any).precio_mayoreo
-          : producto.precio_venta;
+        const precioBase = producto.precio_venta;
         const descCliente = t.clienteSeleccionado?.descuento_porcentaje || 0;
 
         const existingIdx = t.items.findIndex(i => i.producto.id === producto.id);
@@ -287,6 +278,17 @@ export const useVentaStore = create<VentaState>((set, get) => {
       return { ...t, items: newItems };
     }),
 
+    cambiarPrecio: (index, nuevoPrecio) => updateActiva(t => {
+      const newItems = [...t.items];
+      const item = { ...newItems[index] };
+      item.precioOriginal = nuevoPrecio;
+      item.descuentoMonto = nuevoPrecio * (item.descuentoPorcentaje / 100);
+      item.precioFinal = nuevoPrecio - item.descuentoMonto;
+      item.subtotal = item.precioFinal * item.cantidad;
+      newItems[index] = item;
+      return { ...t, items: newItems };
+    }),
+
     aplicarDescuento: (index, porcentaje, autorizadoPor = null) => updateActiva(t => {
       const newItems = [...t.items];
       const item = { ...newItems[index] };
@@ -306,29 +308,6 @@ export const useVentaStore = create<VentaState>((set, get) => {
       metodoPago: 'efectivo',
       montoRecibido: 0,
     })),
-
-    toggleModoMayoreo: () => updateActiva(t => {
-      const nuevoModo = !t.modoMayoreo;
-      // Recalcular precios de items existentes
-      const newItems = t.items.map(item => {
-        const p = item.producto as any;
-        const precioBase = (nuevoModo && p.precio_mayoreo > 0)
-          ? p.precio_mayoreo
-          : p.precio_venta;
-        const descCliente = t.clienteSeleccionado?.descuento_porcentaje || 0;
-        const descMonto = precioBase * (descCliente / 100);
-        const precioFinal = precioBase - descMonto;
-        return {
-          ...item,
-          precioOriginal: precioBase,
-          descuentoPorcentaje: descCliente,
-          descuentoMonto: descMonto,
-          precioFinal,
-          subtotal: precioFinal * item.cantidad,
-        };
-      });
-      return { ...t, modoMayoreo: nuevoModo, items: newItems };
-    }),
 
     seleccionarCliente: (cliente) => updateActiva(t => {
       const descPct = cliente?.descuento_porcentaje || 0;

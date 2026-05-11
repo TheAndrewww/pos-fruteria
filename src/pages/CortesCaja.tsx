@@ -399,8 +399,6 @@ function TarjetaCorte({ corte }: { corte: CorteResumen }) {
         {/* Resumen de ventas por método */}
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           <MiniStat label="Ventas Efectivo" value={fmt(corte.total_ventas_efectivo)} color="var(--color-success)" />
-          <MiniStat label="Tarjeta" value={fmt(corte.total_ventas_tarjeta)} color="#6366f1" />
-          <MiniStat label="Transferencia" value={fmt(corte.total_ventas_transferencia)} color="#06b6d4" />
           <MiniStat label="Total Ventas" value={fmt(corte.total_ventas)} color="var(--color-text)" bold />
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 16 }}>
             <MiniStat label="Esperado" value={fmt(corte.efectivo_esperado)} color="var(--color-primary)" />
@@ -463,8 +461,6 @@ function TarjetaCorte({ corte }: { corte: CorteResumen }) {
                 </h4>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <MetodoPagoCard label="💵 Efectivo" valor={corte.total_ventas_efectivo} total={corte.total_ventas} color="var(--color-success)" />
-                  <MetodoPagoCard label="💳 Tarjeta" valor={corte.total_ventas_tarjeta} total={corte.total_ventas} color="#6366f1" />
-                  <MetodoPagoCard label="📱 Transferencia" valor={corte.total_ventas_transferencia} total={corte.total_ventas} color="#06b6d4" />
                 </div>
               </div>
 
@@ -872,14 +868,6 @@ function ModalCorteTurno({ onClose, onSuccess }: { onClose: () => void; onSucces
                   <p style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>💵 Efectivo</p>
                   <p className="mono" style={{ fontSize: 16, fontWeight: 800, color: 'var(--color-success)' }}>{fmt(datos.total_ventas_efectivo)}</p>
                 </div>
-                <div className="card" style={{ flex: 1, padding: '10px 12px', textAlign: 'center' }}>
-                  <p style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>💳 Tarjeta</p>
-                  <p className="mono" style={{ fontSize: 16, fontWeight: 800, color: '#6366f1' }}>{fmt(datos.total_ventas_tarjeta)}</p>
-                </div>
-                <div className="card" style={{ flex: 1, padding: '10px 12px', textAlign: 'center' }}>
-                  <p style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>📱 Transferencia</p>
-                  <p className="mono" style={{ fontSize: 16, fontWeight: 800, color: '#06b6d4' }}>{fmt(datos.total_ventas_transferencia)}</p>
-                </div>
                 <div className="card" style={{ flex: 1, padding: '10px 12px', textAlign: 'center', background: 'var(--color-surface-2)' }}>
                   <p style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>Total ({datos.num_transacciones})</p>
                   <p className="mono" style={{ fontSize: 16, fontWeight: 800 }}>{fmt(datos.total_ventas)}</p>
@@ -1231,8 +1219,6 @@ function ModalCorteDelDia({ onClose, onSuccess, fechaObjetivo }: {
               {/* VENTAS */}
               <SeccionResumen titulo="RESUMEN DE VENTAS">
                 <FilaResumen label="Efectivo" valor={fmt(datos.total_ventas_efectivo)} color="var(--color-success)" />
-                <FilaResumen label="Tarjeta" valor={fmt(datos.total_ventas_tarjeta)} />
-                <FilaResumen label="Transferencia" valor={fmt(datos.total_ventas_transferencia)} />
                 <FilaResumen label={`Total (${datos.num_transacciones} transacciones)`} valor={fmt(datos.total_ventas)} bold />
                 {datos.total_descuentos > 0 && (
                   <FilaResumen label="Descuentos" valor={`-${fmt(datos.total_descuentos)}`} color="var(--color-text-dim)" />

@@ -12,21 +12,22 @@ import { NumpadModal } from '../components/Numpad';
 export default function PuntoDeVenta() {
   const { productos, cargarTodo } = useProductStore();
   const {
-    agregarProducto, quitarProducto, cambiarCantidad,
+    agregarProducto, quitarProducto, cambiarCantidad, cambiarPrecio,
     total, subtotal, descuentoTotal, redondeo, numItems,
     setMontoRecibido,
     procesarVenta, ventaExitosa, cerrarVentaExitosa, procesando,
     tabs, tabActivaId, nuevaTab, cerrarTab, activarTab,
-    limpiarCarrito, toggleModoMayoreo,
+    limpiarCarrito,
   } = useVentaStore();
   const activa = useVentaActiva();
-  const { items, montoRecibido, modoMayoreo } = activa;
+  const { items, montoRecibido } = activa;
   const { usuario } = useAuthStore();
 
   const [showCobro, setShowCobro] = useState(false);
   const [configNegocio, setConfigNegocio] = useState<ConfigNegocio | null>(null);
   const [ultimoTicket, setUltimoTicket] = useState<TicketData | null>(null);
   const [cantidadModal, setCantidadModal] = useState<Producto | null>(null);
+  const [precioModal, setPrecioModal] = useState<{ index: number; item: typeof items[0] } | null>(null);
   const [flashId, setFlashId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -200,11 +201,6 @@ export default function PuntoDeVenta() {
                 ${p.precio_venta.toFixed(0)}
                 <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--color-text-dim)' }}>/{(p as any).unidad || 'kg'}</span>
               </span>
-              {(p as any).precio_mayoreo > 0 && (
-                <span style={{ fontSize: 10, color: 'var(--color-accent)', fontWeight: 700 }}>
-                  May: ${((p as any).precio_mayoreo).toFixed(0)}/{(p as any).unidad || 'kg'}
-                </span>
-              )}
               {p.stock_actual <= 0 && (
                 <span style={{
                   position: 'absolute', top: 6, right: 6,
@@ -249,16 +245,6 @@ export default function PuntoDeVenta() {
               </span>
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <button
-                onClick={() => toggleModoMayoreo()}
-                style={{
-                  padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
-                  fontSize: 11, fontWeight: 700, transition: 'all 0.15s',
-                  background: modoMayoreo ? 'var(--color-accent)' : 'var(--color-surface-2)',
-                  color: modoMayoreo ? '#fff' : 'var(--color-text-muted)',
-                }}>
-                {modoMayoreo ? '📦 Mayoreo' : '🏷️ Menudeo'}
-              </button>
               {tabs.length > 1 && (
                 <button
                   onClick={() => cerrarTab(tabActivaId)}
@@ -303,8 +289,21 @@ export default function PuntoDeVenta() {
                     <div style={{ fontSize: 13, fontWeight: 700 }}>
                       {(item.producto as any).emoji || '🍎'} {item.producto.nombre}
                     </div>
-                    <div className="mono" style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>
-                      {fmt(item.precioFinal)} × {item.cantidad} {(item.producto as any).unidad || 'kg'}
+                    <div className="mono" style={{ fontSize: 11, color: 'var(--color-text-dim)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setPrecioModal({ index: i, item }); }}
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          color: item.precioFinal !== item.producto.precio_venta ? 'var(--color-warning)' : 'var(--color-primary)',
+                          fontWeight: 700, fontSize: 11, padding: '1px 4px', borderRadius: 4,
+                          textDecoration: 'underline', textDecorationStyle: 'dotted',
+                          fontFamily: 'inherit',
+                        }}
+                        title="Cambiar precio"
+                      >
+                        {fmt(item.precioFinal)}
+                      </button>
+                      × {item.cantidad} {(item.producto as any).unidad || 'kg'}
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -510,6 +509,22 @@ export default function PuntoDeVenta() {
           confirmColor="var(--color-primary)"
           onDone={handleAddWithQuantity}
           onClose={() => setCantidadModal(null)}
+        />
+      )}
+
+      {/* ═══ MODAL PRECIO ═══ */}
+      {precioModal && (
+        <NumpadModal
+          title={`${(precioModal.item.producto as any).emoji || '🍎'} ${precioModal.item.producto.nombre} — Precio`}
+          prefix="$"
+          suffix={`/${(precioModal.item.producto as any).unidad || 'kg'}`}
+          confirmLabel="Aplicar precio"
+          confirmColor="var(--color-warning)"
+          onDone={(valor) => {
+            if (valor > 0) cambiarPrecio(precioModal.index, valor);
+            setPrecioModal(null);
+          }}
+          onClose={() => setPrecioModal(null)}
         />
       )}
     </div>

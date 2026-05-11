@@ -179,7 +179,6 @@ export default function HistorialVentas() {
                   <th style={thStyle}>Fecha</th>
                   <th style={thStyle}>Cajero</th>
                   <th style={thStyle}>Cliente</th>
-                  <th style={thStyle}>Pago</th>
                   <th style={{ ...thStyle, textAlign: 'right' }}>Total</th>
                   <th style={{ ...thStyle, textAlign: 'center' }}>Items</th>
                   <th style={thStyle}>Estado</th>
@@ -189,7 +188,7 @@ export default function HistorialVentas() {
               <tbody>
                 {ventas.length === 0 && !cargando && (
                   <tr>
-                    <td colSpan={9} style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-dim)' }}>
+                    <td colSpan={8} style={{ padding: 40, textAlign: 'center', color: 'var(--color-text-dim)' }}>
                       No se encontraron ventas con esos filtros.
                     </td>
                   </tr>
@@ -209,7 +208,6 @@ export default function HistorialVentas() {
                       <td data-label="Fecha" style={tdStyle}>{formatFecha(v.fecha)}</td>
                       <td data-label="Cajero" style={tdStyle}>{v.usuario_nombre}</td>
                       <td data-label="Cliente" style={tdStyle}>{v.cliente_nombre || '—'}</td>
-                      <td data-label="Pago" style={tdStyle}>{v.metodo_pago}</td>
                       <td data-label="Total" style={{ ...tdStyle, textAlign: 'right', fontWeight: 600 }}>{fmt(v.total)}</td>
                       <td data-label="Items" style={{ ...tdStyle, textAlign: 'center' }}>{v.num_productos}</td>
                       <td data-label="Estado" style={tdStyle}>
@@ -233,7 +231,7 @@ export default function HistorialVentas() {
                     </tr>
                     {expandedRows.has(v.id) && (
                       <tr style={{ background: 'var(--color-surface-2)' }}>
-                        <td colSpan={9} style={{ padding: 0 }}>
+                        <td colSpan={8} style={{ padding: 0 }}>
                           <DetalleVentaInline
                             ventaId={v.id}
                             highlightTerm={articuloBuscado}

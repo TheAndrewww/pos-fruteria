@@ -134,11 +134,11 @@ pub fn crear_venta(
 
     // Insertar venta
     let result = db.execute(
-        r#"INSERT INTO ventas (folio, usuario_id, cliente_id, subtotal, descuento, total,
+        r#"INSERT INTO ventas (folio, usuario_id, subtotal, descuento, total,
            metodo_pago, monto_recibido, cambio, fecha)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"#,
         rusqlite::params![
-            folio, venta.usuario_id, venta.cliente_id,
+            folio, venta.usuario_id,
             venta.subtotal, venta.descuento, venta.total,
             venta.metodo_pago, venta.monto_recibido, venta.cambio, now
         ],
@@ -470,15 +470,14 @@ pub fn obtener_detalle_venta(
 ) -> Result<VentaDetalleCompleto, String> {
     let db = state.db.lock().unwrap();
 
-    let (id, folio, usuario_id, usuario_nombre, cliente_id, cliente_nombre,
+    let (id, folio, usuario_id, usuario_nombre,
          subtotal, descuento, total, metodo_pago, anulada, anulada_por_nombre,
          motivo_anulacion, fecha): (
-        i64, String, i64, String, Option<i64>, Option<String>,
+        i64, String, i64, String,
         f64, f64, f64, String, bool, Option<String>,
         Option<String>, String
     ) = db.query_row(
         r#"SELECT v.id, v.folio, v.usuario_id, u.nombre_completo,
-                  v.cliente_id, NULL,
                   v.subtotal, v.descuento, v.total, v.metodo_pago,
                   v.anulada, ua.nombre_completo, v.motivo_anulacion, v.fecha
            FROM ventas v
@@ -488,9 +487,10 @@ pub fn obtener_detalle_venta(
         rusqlite::params![venta_id],
         |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?,
                   row.get(4)?, row.get(5)?, row.get(6)?, row.get(7)?,
-                  row.get(8)?, row.get(9)?, row.get(10)?, row.get(11)?,
-                  row.get(12)?, row.get(13)?)),
+                  row.get(8)?, row.get(9)?, row.get(10)?, row.get(11)?)),
     ).map_err(|_| "Venta no encontrada".to_string())?;
+    let cliente_id: Option<i64> = None;
+    let cliente_nombre: Option<String> = None;
 
     let mut stmt = db.prepare(
         r#"SELECT vd.id, vd.producto_id, p.codigo, p.nombre,

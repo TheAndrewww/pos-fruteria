@@ -50,7 +50,7 @@ interface VentaDetalleCompleto {
   items: VentaDetalleItem[];
 }
 
-type TabReporte = 'ventas_dia' | 'top_productos' | 'por_vendedor' | 'por_metodo';
+type TabReporte = 'ventas_dia' | 'top_productos' | 'por_vendedor';
 
 // ─── Helpers ──────────────────────────────────────────────
 
@@ -81,18 +81,6 @@ const COLORES = [
   'hsl(100, 50%, 45%)',
   'hsl(260, 60%, 60%)',
 ];
-
-const METODO_COLORES: Record<string, string> = {
-  efectivo: 'hsl(150, 55%, 45%)',
-  tarjeta: 'hsl(210, 70%, 50%)',
-  transferencia: 'hsl(45, 85%, 55%)',
-};
-
-const METODO_LABELS: Record<string, string> = {
-  efectivo: 'Efectivo',
-  tarjeta: 'Tarjeta',
-  transferencia: 'Transferencia',
-};
 
 // ─── Componente Principal ─────────────────────────────────
 
@@ -195,18 +183,6 @@ export default function Reportes() {
     return Object.values(mapa).sort((a, b) => b.total - a.total);
   })();
 
-  // Ventas por método de pago
-  const ventasPorMetodo = (() => {
-    const mapa: Record<string, { metodo: string; label: string; total: number; count: number }> = {};
-    for (const v of ventas) {
-      const met = v.metodo_pago;
-      if (!mapa[met]) mapa[met] = { metodo: met, label: METODO_LABELS[met] || met, total: 0, count: 0 };
-      mapa[met].total += v.total;
-      mapa[met].count += 1;
-    }
-    return Object.values(mapa).sort((a, b) => b.total - a.total);
-  })();
-
   const totalGeneral = ventas.reduce((sum, v) => sum + v.total, 0);
 
   // ─── Tabs ───────────────────────────────────────────────
@@ -215,7 +191,6 @@ export default function Reportes() {
     { id: 'ventas_dia', label: 'Ventas por día' },
     { id: 'top_productos', label: 'Top 10 productos' },
     { id: 'por_vendedor', label: 'Por vendedor' },
-    { id: 'por_metodo', label: 'Por método de pago' },
   ];
 
   return (
@@ -311,7 +286,6 @@ export default function Reportes() {
             {tab === 'ventas_dia' && <GraficaVentasDia data={ventasPorDia} />}
             {tab === 'top_productos' && <TablaTopProductos data={topProductos} />}
             {tab === 'por_vendedor' && <GraficaVendedores data={ventasPorVendedor} totalGeneral={totalGeneral} />}
-            {tab === 'por_metodo' && <GraficaMetodoPago data={ventasPorMetodo} totalGeneral={totalGeneral} />}
           </>
         )}
       </div>
@@ -523,94 +497,6 @@ function GraficaVendedores({ data, totalGeneral }: { data: { nombre: string; tot
                 <p style={{ fontSize: 11, color: 'var(--color-text-dim)', marginTop: 2 }}>
                   {d.count} transacciones · Prom: {d.count > 0 ? fmt(d.total / d.count) : '$0.00'}
                 </p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function GraficaMetodoPago({ data, totalGeneral }: { data: { metodo: string; label: string; total: number; count: number }[]; totalGeneral: number }) {
-  if (data.length === 0) return <EmptyState mensaje="No hay datos de pagos en este período" />;
-
-  const pieData = data.map(d => ({
-    name: d.label,
-    value: d.total,
-    fill: METODO_COLORES[d.metodo] || COLORES[0],
-  }));
-
-  return (
-    <div className="pos-2col-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-      <div className="card" style={{ padding: 20 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, color: 'var(--color-text-muted)' }}>
-          VENTAS POR MÉTODO DE PAGO
-        </h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <PieChart>
-            <Pie
-              data={pieData}
-              cx="50%" cy="50%"
-              innerRadius={60} outerRadius={110}
-              paddingAngle={3}
-              dataKey="value"
-            >
-              {pieData.map((entry, i) => (
-                <Cell key={i} fill={entry.fill} />
-              ))}
-            </Pie>
-            <Tooltip
-              formatter={(value: any) => [fmt(Number(value)), 'Total']}
-              contentStyle={{
-                background: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 8, fontSize: 13,
-              }}
-            />
-            <Legend />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="card" style={{ padding: 20 }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16, color: 'var(--color-text-muted)' }}>
-          DESGLOSE
-        </h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {data.map(d => {
-            const pct = totalGeneral > 0 ? (d.total / totalGeneral) * 100 : 0;
-            const color = METODO_COLORES[d.metodo] || COLORES[0];
-            return (
-              <div key={d.metodo}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{
-                      width: 12, height: 12, borderRadius: 3,
-                      background: color, flexShrink: 0,
-                    }} />
-                    <span style={{ fontSize: 14, fontWeight: 700 }}>{d.label}</span>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span className="mono" style={{ fontSize: 18, fontWeight: 800, color }}>{fmt(d.total)}</span>
-                  </div>
-                </div>
-                <div style={{ height: 8, background: 'var(--color-surface-2)', borderRadius: 4, overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%', borderRadius: 4,
-                    background: color,
-                    width: `${pct}%`,
-                    transition: 'width 0.5s ease',
-                  }} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                  <span style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>
-                    {d.count} transacciones
-                  </span>
-                  <span style={{ fontSize: 11, color: 'var(--color-text-dim)' }}>
-                    {pct.toFixed(1)}%
-                  </span>
-                </div>
               </div>
             );
           })}

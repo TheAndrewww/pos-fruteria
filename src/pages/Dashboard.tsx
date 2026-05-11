@@ -27,8 +27,6 @@ interface EstadisticasDia {
   total_ventas: number;
   num_transacciones: number;
   efectivo: number;
-  tarjeta: number;
-  transferencia: number;
   producto_top_nombre: string | null;
   producto_top_cantidad: number;
 }
@@ -396,12 +394,10 @@ function DashboardHome({ stats, fmt, stockBajo, onVerInventario }: {
 
       <div className="card" style={{ padding: 24 }}>
         <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 20, color: 'var(--color-text-muted)' }}>
-          DESGLOSE POR MÉTODO DE PAGO
+          VENTAS EN EFECTIVO
         </h3>
         <div className="dashboard-payment-grid">
           <PaymentBar label="Efectivo" value={stats.efectivo} total={stats.total_ventas} color="var(--color-success)" fmt={fmt} />
-          <PaymentBar label="Tarjeta" value={stats.tarjeta} total={stats.total_ventas} color="var(--color-primary)" fmt={fmt} />
-          <PaymentBar label="Transferencia" value={stats.transferencia} total={stats.total_ventas} color="var(--color-secondary-h)" fmt={fmt} />
         </div>
       </div>
     </div>
