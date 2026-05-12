@@ -103,7 +103,7 @@ fn truncar(s: &str, max: usize) -> String {
 // ─── Generación del ticket ───────────────────────────────────
 
 pub fn generar_ticket_venta(datos: &DatosTicketTermico) -> Vec<u8> {
-    let ancho: usize = 32; // típico 58mm; 48 para 80mm
+    let ancho: usize = 48; // 80mm
     let mut b: Vec<u8> = Vec::with_capacity(2048);
 
     init(&mut b);
@@ -240,6 +240,16 @@ pub fn imprimir_ticket_termico(
     let bytes = generar_ticket_venta(&datos);
     enviar_bytes_a_impresora(&bytes, impresora.trim())?;
     log::info!("Ticket térmico impreso en '{}' ({} bytes)", impresora, bytes.len());
+    Ok(())
+}
+
+#[tauri::command]
+pub fn abrir_ticket_en_navegador(html: String) -> Result<(), String> {
+    let mut tmp = std::env::temp_dir();
+    tmp.push(format!("pos_ticket_{}.html", chrono::Local::now().timestamp_millis()));
+    std::fs::write(&tmp, html.as_bytes()).map_err(|e| e.to_string())?;
+    let url = format!("file://{}", tmp.to_string_lossy());
+    open::that(&url).map_err(|e| format!("No se pudo abrir el navegador: {}", e))?;
     Ok(())
 }
 

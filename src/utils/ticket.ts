@@ -1,6 +1,6 @@
 // utils/ticket.ts — Impresión de ticket (térmica ESC/POS o HTML fallback)
 
-import { printHTML, escapeHTML } from './print';
+import { printHTMLDialogOverlay, escapeHTML } from './print';
 import { invoke } from '../lib/invokeCompat';
 
 export interface ConfigNegocio {
@@ -43,7 +43,25 @@ export interface TicketData {
 
 const fmt = (n: number) => `$${n.toFixed(2)}`;
 
-export function buildTicketHTML(negocio: ConfigNegocio, t: TicketData): string {
+let logoDataUrl: string | null = null;
+
+async function getLogoDataUrl(): Promise<string> {
+  if (logoDataUrl) return logoDataUrl;
+  try {
+    const resp = await fetch('/logo-ticket.png');
+    const blob = await resp.blob();
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => { logoDataUrl = reader.result as string; resolve(logoDataUrl!); };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return '';
+  }
+}
+
+export function buildTicketHTML(negocio: ConfigNegocio, t: TicketData, logoSrc?: string): string {
   const metodo = t.metodo_pago.charAt(0).toUpperCase() + t.metodo_pago.slice(1);
   const mostrarEfectivo = t.metodo_pago === 'efectivo' && t.monto_recibido !== undefined;
 
@@ -59,35 +77,35 @@ export function buildTicketHTML(negocio: ConfigNegocio, t: TicketData): string {
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${t.es_presupuesto ? 'Presupuesto' : 'Ticket'} ${escapeHTML(t.folio)}</title>
 <style>
-  @page { size: 58mm auto; margin: 0; }
+  @page { size: 80mm auto; margin: 0; }
   html, body { margin: 0; padding: 0; font-family: 'Courier New', monospace; color: #000; }
-  body { width: 50mm; padding: 2mm; font-size: 9pt; line-height: 1.25; }
+  body { width: 72mm; padding: 3mm; font-size: 10pt; line-height: 1.3; }
   .center { text-align: center; }
   .right { text-align: right; }
   .bold { font-weight: 700; }
-  .big { font-size: 12pt; }
-  .xl { font-size: 14pt; }
+  .big { font-size: 13pt; }
+  .xl { font-size: 15pt; }
   .muted { font-size: 8pt; color: #333; }
   .sep { border-top: 1px dashed #000; margin: 5px 0; }
   .sep-thick { border-top: 2px solid #000; margin: 6px 0; }
   .row { display: flex; justify-content: space-between; gap: 4px; }
   .item { margin-bottom: 3px; }
-  .item-nom { font-size: 9pt; }
-  .item-row { display: flex; justify-content: space-between; font-size: 9pt; }
+  .item-nom { font-size: 10pt; }
+  .item-row { display: flex; justify-content: space-between; font-size: 10pt; }
   .item-sub { font-weight: 700; }
-  .total-row { font-size: 13pt; font-weight: 900; color: #000; }
+  .total-row { font-size: 14pt; font-weight: 900; color: #000; }
   .reprint { border: 1px solid #000; padding: 2px 6px; display: inline-block; font-size: 8pt; margin-bottom: 3px; }
-  .logo { width: 40mm; max-width: 80%; height: auto; margin: 3px auto; display: block; }
-  .brand-name { font-size: 11pt; font-weight: 900; letter-spacing: 0.5px; margin: 2px 0; color: #000; }
-  .brand-sub { font-size: 8pt; color: #000; font-weight: 700; letter-spacing: 1px; margin-bottom: 2px; }
-  .footer-msg { font-size: 9pt; font-weight: 600; margin: 4px 0 2px; }
-  .footer-brand { font-size: 7pt; color: #000; font-weight: 700; letter-spacing: 0.5px; margin-top: 4px; }
+  .logo { width: 55mm; max-width: 80%; height: auto; margin: 4px auto; display: block; }
+  .brand-name { font-size: 13pt; font-weight: 900; letter-spacing: 0.5px; margin: 3px 0; color: #000; }
+  .brand-sub { font-size: 9pt; color: #000; font-weight: 700; letter-spacing: 1px; margin-bottom: 3px; }
+  .footer-msg { font-size: 10pt; font-weight: 600; margin: 5px 0 3px; }
+  .footer-brand { font-size: 8pt; color: #000; font-weight: 700; letter-spacing: 0.5px; margin-top: 5px; }
 </style></head><body>
   ${t.es_presupuesto ? '<div class="center"><span class="reprint">*** PRESUPUESTO ***</span><br><span style="font-size: 7pt; font-weight: bold; padding-top: 2px; display: inline-block;">Esta cotización puede variar sin previo aviso.</span></div>' : (t.reimpresion ? '<div class="center"><span class="reprint">*** REIMPRESIÓN ***</span></div>' : '')}
   <div class="center">
-    <img class="logo" src="${window.location.origin}/logo-ticket.png" alt="Paulín Premium Fruits" onerror="this.style.display='none'" />
+    ${logoSrc ? `<img class="logo" src="${logoSrc}" alt="Paulín Premium Fruits" />` : ''}
     <div class="brand-name">${escapeHTML(negocio.nombre || 'PAULÍN PREMIUM FRUITS')}</div>
-    <div class="brand-sub">ABASOLO, GUANAJUATO</div>
+    <div class="brand-sub">LA VENTA ANDÉN D 7-8</div>
   </div>
   ${negocio.direccion ? `<div class="center muted">${escapeHTML(negocio.direccion)}</div>` : ''}
   ${negocio.telefono ? `<div class="center muted">Tel: ${escapeHTML(negocio.telefono)}</div>` : ''}
@@ -157,6 +175,7 @@ export async function imprimirTicket(negocio: ConfigNegocio, data: TicketData): 
       // Continúa al fallback de abajo.
     }
   }
-  // 2) Fallback: HTML en ventana del navegador (comportamiento legacy).
-  await printHTML(buildTicketHTML(negocio, data));
+  // 2) Fallback: abrir ticket en navegador del sistema.
+  const logo = await getLogoDataUrl();
+  await printHTMLDialogOverlay(buildTicketHTML(negocio, data, logo));
 }
