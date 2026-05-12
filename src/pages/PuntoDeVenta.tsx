@@ -31,9 +31,17 @@ export default function PuntoDeVenta() {
   const [precioModal, setPrecioModal] = useState<{ index: number; item: typeof items[0] } | null>(null);
   const [flashId, setFlashId] = useState<number | null>(null);
 
+  const recargarConfig = () => {
+    invoke<ConfigNegocio>('obtener_config_negocio').then(setConfigNegocio).catch(() => {});
+  };
+
   useEffect(() => {
     cargarTodo();
-    invoke<ConfigNegocio>('obtener_config_negocio').then(setConfigNegocio).catch(() => {});
+    recargarConfig();
+    // Recargar config al volver a la ventana (por si cambió en Ajustes)
+    const onFocus = () => recargarConfig();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, []);
 
   // Atajos de teclado
@@ -108,18 +116,27 @@ export default function PuntoDeVenta() {
         monto_recibido: recibidoSnap, cambio: venta.cambio,
       };
       setUltimoTicket(ticket);
-      // Auto-imprimir ticket
-      if (configNegocio) {
-        imprimirTicket(configNegocio, ticket).catch(() => {});
+      // Auto-imprimir ticket con config fresca
+      try {
+        const cfg = await invoke<ConfigNegocio>('obtener_config_negocio');
+        setConfigNegocio(cfg);
+        imprimirTicket(cfg, ticket).catch(() => {});
+      } catch {
+        if (configNegocio) imprimirTicket(configNegocio, ticket).catch(() => {});
       }
     } catch (err: any) {
       alert(err.message);
     }
   };
 
-  const reimprimirUltimo = () => {
-    if (ultimoTicket && configNegocio) {
-      imprimirTicket(configNegocio, { ...ultimoTicket, reimpresion: true });
+  const reimprimirUltimo = async () => {
+    if (!ultimoTicket) return;
+    try {
+      const cfg = await invoke<ConfigNegocio>('obtener_config_negocio');
+      setConfigNegocio(cfg);
+      imprimirTicket(cfg, { ...ultimoTicket, reimpresion: true });
+    } catch {
+      if (configNegocio) imprimirTicket(configNegocio, { ...ultimoTicket, reimpresion: true });
     }
   };
 
