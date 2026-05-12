@@ -17,6 +17,7 @@ const MIGRATIONS: &[MigrationFn] = &[
     migracion_009_noop,
     migracion_010_noop,
     migracion_011_audit_log_sync,
+    migracion_012_asegurar_impresora_termica,
 ];
 
 pub fn aplicar_migraciones(conn: &Connection) -> Result<()> {
@@ -589,5 +590,32 @@ fn migracion_011_audit_log_sync(conn: &Connection) -> Result<()> {
         END;
     "#)?;
 
+    Ok(())
+}
+
+// ─── Migración 012 ────────────────────────────────────────
+/// Red de seguridad: garantiza que la columna `impresora_termica` exista en
+/// `config_negocio`, incluso si la BD fue migrada con una versión anterior del
+/// código que no incluía la migración 006 original.
+fn migracion_012_asegurar_impresora_termica(conn: &Connection) -> Result<()> {
+    if !columna_existe(conn, "config_negocio", "impresora_termica") {
+        conn.execute(
+            "ALTER TABLE config_negocio ADD COLUMN impresora_termica TEXT NOT NULL DEFAULT ''",
+            [],
+        )?;
+        log::info!("Migración 012: columna impresora_termica creada");
+    }
+    if !columna_existe(conn, "config_negocio", "respaldo_auto_activo") {
+        let _ = conn.execute(
+            "ALTER TABLE config_negocio ADD COLUMN respaldo_auto_activo INTEGER NOT NULL DEFAULT 1",
+            [],
+        );
+    }
+    if !columna_existe(conn, "config_negocio", "respaldo_auto_hora") {
+        let _ = conn.execute(
+            "ALTER TABLE config_negocio ADD COLUMN respaldo_auto_hora TEXT NOT NULL DEFAULT '23:00'",
+            [],
+        );
+    }
     Ok(())
 }

@@ -175,11 +175,44 @@ async function intentarImpresionTermica(negocio: ConfigNegocio, data: TicketData
   }
 }
 
-/** Impresión automática al completar venta — solo térmica, sin abrir navegador. */
-export async function imprimirTicketAuto(negocio: ConfigNegocio, data: TicketData): Promise<void> {
-  const ok = await intentarImpresionTermica(negocio, data);
-  if (!ok) {
-    console.warn('Auto-impresión: no hay impresora térmica configurada o falló. Configúrala en Ajustes.');
+/** Impresión automática al completar venta — solo térmica, sin abrir navegador.
+ *  Devuelve `null` si se imprimió bien, o un string con el error para que la UI lo muestre. */
+export async function imprimirTicketAuto(negocio: ConfigNegocio, data: TicketData): Promise<string | null> {
+  const impresora = (negocio.impresora_termica || '').trim();
+  if (!impresora) {
+    return 'no_printer';
+  }
+  try {
+    await invoke('imprimir_ticket_termico', {
+      datos: {
+        negocio_nombre: negocio.nombre,
+        negocio_direccion: negocio.direccion,
+        negocio_telefono: negocio.telefono,
+        negocio_rfc: negocio.rfc,
+        mensaje_pie: negocio.mensaje_pie,
+        folio: data.folio,
+        fecha: data.fecha,
+        usuario: data.usuario.split(' ')[0],
+        cliente: data.cliente ?? null,
+        items: data.items.map(i => ({
+          cantidad: i.cantidad,
+          nombre: i.nombre,
+          precio_unitario: i.precio_final,
+          subtotal: i.subtotal,
+        })),
+        subtotal: data.subtotal,
+        descuento: data.descuento,
+        redondeo: data.redondeo ?? 0,
+        total: data.total,
+        metodo_pago: data.metodo_pago,
+      },
+      impresora,
+    });
+    return null; // éxito
+  } catch (e: any) {
+    const msg = typeof e === 'string' ? e : e?.message || 'Error desconocido';
+    console.error('Auto-impresión falló:', msg);
+    return msg;
   }
 }
 

@@ -109,23 +109,35 @@ export default function Ajustes() {
     }
   };
 
-  const handlePrueba = () => {
-    imprimirTicket(config, {
-      folio: 'PRUEBA-001',
-      fecha: new Date().toLocaleString('es-MX'),
-      usuario: 'Vendedor de prueba',
-      cliente: 'Cliente Ejemplo',
-      items: [
-        { nombre: 'Producto de ejemplo 1', codigo: 'MR-00001', cantidad: 2, precio_final: 150.00, subtotal: 300.00 },
-        { nombre: 'Producto de ejemplo 2', codigo: 'MR-00002', cantidad: 1, precio_final: 85.50, subtotal: 85.50, descuento_porcentaje: 10 },
-      ],
-      subtotal: 385.50,
-      descuento: 9.50,
-      total: 385.50,
-      metodo_pago: 'efectivo',
-      monto_recibido: 400.00,
-      cambio: 14.50,
-    });
+  const handlePrueba = async () => {
+    const impresora = (config.impresora_termica || '').trim();
+    if (impresora) {
+      // Prueba directa con la impresora térmica seleccionada
+      try {
+        const msg = await invoke<string>('probar_impresora', { impresora });
+        alert('✅ ' + msg);
+      } catch (e: any) {
+        alert('❌ Error de impresión:\n' + (typeof e === 'string' ? e : e?.message || e));
+      }
+    } else {
+      // Fallback: prueba HTML en navegador
+      imprimirTicket(config, {
+        folio: 'PRUEBA-001',
+        fecha: new Date().toLocaleString('es-MX'),
+        usuario: 'Vendedor de prueba',
+        cliente: 'Cliente Ejemplo',
+        items: [
+          { nombre: 'Producto de ejemplo 1', codigo: 'MR-00001', cantidad: 2, precio_final: 150.00, subtotal: 300.00 },
+          { nombre: 'Producto de ejemplo 2', codigo: 'MR-00002', cantidad: 1, precio_final: 85.50, subtotal: 85.50, descuento_porcentaje: 10 },
+        ],
+        subtotal: 385.50,
+        descuento: 9.50,
+        total: 385.50,
+        metodo_pago: 'efectivo',
+        monto_recibido: 400.00,
+        cambio: 14.50,
+      });
+    }
   };
 
   if (cargando) {

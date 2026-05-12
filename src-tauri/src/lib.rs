@@ -38,7 +38,7 @@ use commands::respaldos::{
     respaldo_auto_si_necesario, obtener_info_bd,
 };
 use commands::print::imprimir_html;
-use commands::print_termico::{imprimir_ticket_termico, listar_impresoras, abrir_ticket_en_navegador};
+use commands::print_termico::{imprimir_ticket_termico, listar_impresoras, abrir_ticket_en_navegador, probar_impresora};
 use commands::importar::importar_catalogo_csv;
 use commands::conexion::{
     obtener_info_servidor, generar_qr_emparejamiento,
@@ -206,6 +206,7 @@ pub fn run() {
             imprimir_ticket_termico,
             listar_impresoras,
             abrir_ticket_en_navegador,
+            probar_impresora,
             // Importación
             importar_catalogo_csv,
             // Exportación

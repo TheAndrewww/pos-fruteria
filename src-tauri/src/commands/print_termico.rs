@@ -186,25 +186,127 @@ pub fn generar_ticket_venta(datos: &DatosTicketTermico) -> Vec<u8> {
 
 // ─── Envío al spooler ────────────────────────────────────────
 
+/// Script PowerShell que usa la API Win32 `WritePrinter` para enviar bytes
+/// RAW a la impresora, sin necesidad de compartirla en red.
+#[cfg(target_os = "windows")]
+const PS_RAW_PRINT_SCRIPT: &str = r#"
+param([string]$PrinterName, [string]$FilePath)
+
+Add-Type -TypeDefinition @'
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
+
+public class RawPrinterHelper {
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public struct DOCINFOW {
+        [MarshalAs(UnmanagedType.LPWStr)] public string pDocName;
+        [MarshalAs(UnmanagedType.LPWStr)] public string pOutputFile;
+        [MarshalAs(UnmanagedType.LPWStr)] public string pDatatype;
+    }
+
+    [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
+    [DllImport("winspool.drv", SetLastError = true)]
+    public static extern bool ClosePrinter(IntPtr hPrinter);
+    [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern bool StartDocPrinter(IntPtr hPrinter, int level, ref DOCINFOW pDocInfo);
+    [DllImport("winspool.drv", SetLastError = true)]
+    public static extern bool EndDocPrinter(IntPtr hPrinter);
+    [DllImport("winspool.drv", SetLastError = true)]
+    public static extern bool StartPagePrinter(IntPtr hPrinter);
+    [DllImport("winspool.drv", SetLastError = true)]
+    public static extern bool EndPagePrinter(IntPtr hPrinter);
+    [DllImport("winspool.drv", SetLastError = true)]
+    public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBytes, int dwCount, out int dwWritten);
+
+    public static void SendRawData(string printerName, byte[] data) {
+        IntPtr hPrinter;
+        if (!OpenPrinter(printerName, out hPrinter, IntPtr.Zero)) {
+            int err = Marshal.GetLastWin32Error();
+            throw new Exception("No se pudo abrir la impresora '" + printerName + "' (Win32 error " + err + ")");
+        }
+        try {
+            DOCINFOW di = new DOCINFOW();
+            di.pDocName = "POS Ticket";
+            di.pOutputFile = null;
+            di.pDatatype = "RAW";
+            if (!StartDocPrinter(hPrinter, 1, ref di)) {
+                throw new Exception("StartDocPrinter fallo (error " + Marshal.GetLastWin32Error() + ")");
+            }
+            try {
+                if (!StartPagePrinter(hPrinter)) {
+                    throw new Exception("StartPagePrinter fallo (error " + Marshal.GetLastWin32Error() + ")");
+                }
+                IntPtr pBuf = Marshal.AllocCoTaskMem(data.Length);
+                try {
+                    Marshal.Copy(data, 0, pBuf, data.Length);
+                    int written;
+                    if (!WritePrinter(hPrinter, pBuf, data.Length, out written)) {
+                        throw new Exception("WritePrinter fallo (error " + Marshal.GetLastWin32Error() + ")");
+                    }
+                } finally {
+                    Marshal.FreeCoTaskMem(pBuf);
+                }
+                EndPagePrinter(hPrinter);
+            } finally {
+                EndDocPrinter(hPrinter);
+            }
+        } finally {
+            ClosePrinter(hPrinter);
+        }
+    }
+}
+'@
+
+$bytes = [System.IO.File]::ReadAllBytes($FilePath)
+[RawPrinterHelper]::SendRawData($PrinterName, $bytes)
+Write-Output "PRINT_OK"
+"#;
+
 #[cfg(target_os = "windows")]
 fn enviar_bytes_a_impresora(bytes: &[u8], impresora: &str) -> Result<(), String> {
     use std::io::Write as _;
-    // Escribir a temp file y copiar en binario a la cola de la impresora
-    let mut tmp = std::env::temp_dir();
-    tmp.push(format!("pos_ticket_{}.prn", chrono::Local::now().timestamp_nanos_opt().unwrap_or(0)));
+
+    // 1. Escribir datos ESC/POS a archivo temporal
+    let mut tmp_data = std::env::temp_dir();
+    tmp_data.push(format!("pos_ticket_{}.prn", chrono::Local::now().timestamp_nanos_opt().unwrap_or(0)));
     {
-        let mut f = std::fs::File::create(&tmp).map_err(|e| e.to_string())?;
+        let mut f = std::fs::File::create(&tmp_data).map_err(|e| e.to_string())?;
         f.write_all(bytes).map_err(|e| e.to_string())?;
     }
-    let target = format!(r"\\localhost\{}", impresora);
-    let status = Command::new("cmd")
-        .args(["/C", "copy", "/B", tmp.to_string_lossy().as_ref(), &target])
-        .status()
-        .map_err(|e| format!("No se pudo ejecutar copy: {}", e))?;
-    let _ = std::fs::remove_file(&tmp);
-    if !status.success() {
-        return Err(format!("Falló la impresión en '{}' (code {:?})", impresora, status.code()));
+
+    // 2. Escribir script PowerShell a archivo temporal
+    let mut tmp_script = std::env::temp_dir();
+    tmp_script.push("pos_raw_print.ps1");
+    std::fs::write(&tmp_script, PS_RAW_PRINT_SCRIPT).map_err(|e| e.to_string())?;
+
+    // 3. Ejecutar con parámetros
+    let output = Command::new("powershell")
+        .args([
+            "-NoProfile", "-ExecutionPolicy", "Bypass",
+            "-File", &tmp_script.to_string_lossy(),
+            "-PrinterName", impresora,
+            "-FilePath", &tmp_data.to_string_lossy(),
+        ])
+        .output()
+        .map_err(|e| format!("No se pudo ejecutar PowerShell: {}", e))?;
+
+    let _ = std::fs::remove_file(&tmp_data);
+    // No borramos el script — se reutiliza
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    if !output.status.success() || !stdout.contains("PRINT_OK") {
+        return Err(format!(
+            "Falló la impresión RAW en '{}'. {}{}",
+            impresora,
+            if !stderr.trim().is_empty() { stderr.trim() } else { &stdout }.to_string(),
+            if let Some(code) = output.status.code() { format!(" (exit {})", code) } else { String::new() }
+        ));
     }
+
     Ok(())
 }
 
@@ -312,4 +414,36 @@ pub fn listar_impresoras() -> Result<Vec<ImpresoraInfo>, String> {
             .collect();
         Ok(impresoras)
     }
+}
+
+/// Imprime un ticket de prueba para verificar que la impresora funciona.
+#[tauri::command]
+pub fn probar_impresora(impresora: String) -> Result<String, String> {
+    if impresora.trim().is_empty() {
+        return Err("Debes especificar una impresora".into());
+    }
+    let ancho: usize = 48;
+    let mut b: Vec<u8> = Vec::with_capacity(512);
+    init(&mut b);
+    centrado(&mut b);
+    negrita_on(&mut b);
+    doble_tamano(&mut b);
+    let _ = writeln!(b, "PRUEBA");
+    tamano_normal(&mut b);
+    negrita_off(&mut b);
+    let _ = writeln!(b, "{}", "-".repeat(ancho));
+    let _ = writeln!(b, "Paulin Premium Fruits");
+    let _ = writeln!(b, "Impresora: {}", impresora.trim());
+    let _ = writeln!(b, "Fecha: {}", chrono::Local::now().format("%d/%m/%Y %H:%M"));
+    let _ = writeln!(b, "{}", "-".repeat(ancho));
+    centrado(&mut b);
+    let _ = writeln!(b, "Si puedes leer esto,");
+    let _ = writeln!(b, "la impresora funciona!");
+    let _ = writeln!(b, "");
+    let _ = writeln!(b, "");
+    let _ = writeln!(b, "");
+    cortar_papel(&mut b);
+
+    enviar_bytes_a_impresora(&b, impresora.trim())?;
+    Ok(format!("Ticket de prueba enviado a '{}' ({} bytes)", impresora.trim(), b.len()))
 }

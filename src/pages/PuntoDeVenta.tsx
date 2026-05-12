@@ -30,6 +30,7 @@ export default function PuntoDeVenta() {
   const [taraModal, setTaraModal] = useState<{ index: number; item: typeof items[0] } | null>(null);
   const [precioModal, setPrecioModal] = useState<{ index: number; item: typeof items[0] } | null>(null);
   const [flashId, setFlashId] = useState<number | null>(null);
+  const [printError, setPrintError] = useState<string | null>(null);
 
   const recargarConfig = () => {
     invoke<ConfigNegocio>('obtener_config_negocio').then(setConfigNegocio).catch(() => {});
@@ -116,13 +117,23 @@ export default function PuntoDeVenta() {
         monto_recibido: recibidoSnap, cambio: venta.cambio,
       };
       setUltimoTicket(ticket);
+      setPrintError(null);
       // Auto-imprimir ticket con config fresca (solo térmica, sin navegador)
       try {
         const cfg = await invoke<ConfigNegocio>('obtener_config_negocio');
         setConfigNegocio(cfg);
-        imprimirTicketAuto(cfg, ticket).catch(() => {});
+        const err = await imprimirTicketAuto(cfg, ticket);
+        if (err === 'no_printer') {
+          setPrintError('Sin impresora configurada. Ve a Ajustes → Impresora térmica.');
+        } else if (err) {
+          setPrintError(`Error al imprimir: ${err}`);
+        }
       } catch {
-        if (configNegocio) imprimirTicketAuto(configNegocio, ticket).catch(() => {});
+        if (configNegocio) {
+          const err = await imprimirTicketAuto(configNegocio, ticket);
+          if (err && err !== 'no_printer') setPrintError(`Error al imprimir: ${err}`);
+          else if (err === 'no_printer') setPrintError('Sin impresora configurada.');
+        }
       }
     } catch (err: any) {
       alert(err.message);
@@ -162,6 +173,15 @@ export default function PuntoDeVenta() {
             </div>
           )}
         </div>
+        {printError && (
+          <div style={{
+            background: 'var(--color-danger-bg, #fef2f2)', border: '1px solid var(--color-danger, #ef4444)',
+            borderRadius: 10, padding: '10px 18px', maxWidth: 500, textAlign: 'center',
+            fontSize: 13, fontWeight: 600, color: 'var(--color-danger, #dc2626)',
+          }}>
+            🖨️ {printError}
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 12 }}>
           <button className="btn btn-primary btn-xl" onClick={cerrarVentaExitosa}>
             Nueva Venta
