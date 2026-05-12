@@ -27,6 +27,7 @@ export default function PuntoDeVenta() {
   const [configNegocio, setConfigNegocio] = useState<ConfigNegocio | null>(null);
   const [ultimoTicket, setUltimoTicket] = useState<TicketData | null>(null);
   const [cantidadModal, setCantidadModal] = useState<Producto | null>(null);
+  const [taraModal, setTaraModal] = useState<{ index: number; item: typeof items[0] } | null>(null);
   const [precioModal, setPrecioModal] = useState<{ index: number; item: typeof items[0] } | null>(null);
   const [flashId, setFlashId] = useState<number | null>(null);
 
@@ -107,6 +108,10 @@ export default function PuntoDeVenta() {
         monto_recibido: recibidoSnap, cambio: venta.cambio,
       };
       setUltimoTicket(ticket);
+      // Auto-imprimir ticket
+      if (configNegocio) {
+        imprimirTicket(configNegocio, ticket).catch(() => {});
+      }
     } catch (err: any) {
       alert(err.message);
     }
@@ -318,6 +323,20 @@ export default function PuntoDeVenta() {
                       onClick={() => cambiarCantidad(i, item.cantidad + 1)}>
                       <Plus size={16} />
                     </button>
+                    {((item.producto as any).unidad || 'kg') === 'kg' && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setTaraModal({ index: i, item }); }}
+                        style={{
+                          background: 'var(--color-surface-2)', border: '1px solid var(--color-border)',
+                          cursor: 'pointer', color: 'var(--color-text-muted)',
+                          fontWeight: 700, fontSize: 9, padding: '2px 6px', borderRadius: 6,
+                          fontFamily: 'inherit', marginLeft: 2,
+                        }}
+                        title="Descontar tara"
+                      >
+                        TARA
+                      </button>
+                    )}
                   </div>
                   <div className="mono" style={{ fontWeight: 800, fontSize: 15, minWidth: 65, textAlign: 'right' }}>
                     {fmt(item.subtotal)}
@@ -509,6 +528,27 @@ export default function PuntoDeVenta() {
           confirmColor="var(--color-primary)"
           onDone={handleAddWithQuantity}
           onClose={() => setCantidadModal(null)}
+        />
+      )}
+
+      {/* ═══ MODAL TARA ═══ */}
+      {taraModal && (
+        <NumpadModal
+          title={`${(taraModal.item.producto as any).emoji || '🍎'} ${taraModal.item.producto.nombre} — Tara`}
+          prefix=""
+          suffix="kg"
+          confirmLabel="Descontar tara"
+          confirmColor="var(--color-danger)"
+          onDone={(valor) => {
+            const nuevaCantidad = taraModal.item.cantidad - valor;
+            if (nuevaCantidad > 0) {
+              cambiarCantidad(taraModal.index, parseFloat(nuevaCantidad.toFixed(3)));
+            } else {
+              alert('La tara no puede ser mayor o igual al peso total');
+            }
+            setTaraModal(null);
+          }}
+          onClose={() => setTaraModal(null)}
         />
       )}
 

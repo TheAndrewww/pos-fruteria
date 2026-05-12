@@ -392,6 +392,89 @@ pub fn anular_venta(
     Ok(true)
 }
 
+/// Modificar precios y cantidades de una venta ya cerrada
+#[derive(Deserialize)]
+pub struct ItemModificacion {
+    pub venta_detalle_id: i64,
+    pub precio_final: f64,
+    pub cantidad: f64,
+}
+
+#[tauri::command]
+pub fn modificar_venta(
+    venta_id: i64,
+    usuario_id: i64,
+    items: Vec<ItemModificacion>,
+    state: State<'_, AppState>,
+) -> Result<bool, String> {
+    let db = state.db.lock().unwrap();
+    let now = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+
+    // Verificar que la venta existe y no está anulada
+    let (folio, total_anterior): (String, f64) = db.query_row(
+        "SELECT folio, total FROM ventas WHERE id = ? AND anulada = 0",
+        rusqlite::params![venta_id],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    ).map_err(|_| "Venta no encontrada o anulada".to_string())?;
+
+    db.execute("BEGIN TRANSACTION", []).map_err(|e| e.to_string())?;
+
+    let mut nuevo_subtotal: f64 = 0.0;
+
+    for item in &items {
+        // Obtener datos actuales del detalle
+        let (prod_id, cant_anterior, precio_anterior): (i64, f64, f64) = db.query_row(
+            "SELECT producto_id, cantidad, precio_final FROM venta_detalle WHERE id = ? AND venta_id = ?",
+            rusqlite::params![item.venta_detalle_id, venta_id],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        ).map_err(|e| { let _ = db.execute("ROLLBACK", []); format!("Detalle no encontrado: {}", e) })?;
+
+        let subtotal_item = item.precio_final * item.cantidad;
+        nuevo_subtotal += subtotal_item;
+
+        // Actualizar detalle
+        db.execute(
+            "UPDATE venta_detalle SET precio_final = ?, precio_original = ?, cantidad = ?, subtotal = ? WHERE id = ?",
+            rusqlite::params![item.precio_final, item.precio_final, item.cantidad, subtotal_item, item.venta_detalle_id],
+        ).map_err(|e| { let _ = db.execute("ROLLBACK", []); e.to_string() })?;
+
+        // Ajustar stock si la cantidad cambió
+        let diff_cantidad = cant_anterior - item.cantidad;
+        if diff_cantidad.abs() > 0.001 {
+            db.execute(
+                "UPDATE productos SET stock_actual = MAX(0, stock_actual + ?), updated_at = ? WHERE id = ?",
+                rusqlite::params![diff_cantidad, now, prod_id],
+            ).map_err(|e| { let _ = db.execute("ROLLBACK", []); e.to_string() })?;
+        }
+    }
+
+    // Recalcular total redondeado al peso
+    let cents = (nuevo_subtotal * 100.0).round() as i64;
+    let remainder = cents % 100;
+    let nuevo_total = if remainder == 0 { cents / 100 } else { (cents / 100) + 1 } as f64;
+
+    // Actualizar venta
+    db.execute(
+        "UPDATE ventas SET subtotal = ?, total = ?, descuento = 0 WHERE id = ?",
+        rusqlite::params![nuevo_subtotal, nuevo_total, venta_id],
+    ).map_err(|e| { let _ = db.execute("ROLLBACK", []); e.to_string() })?;
+
+    // Bitácora
+    let _ = db.execute(
+        r#"INSERT INTO audit_log (usuario_id, accion, tabla_afectada, registro_id,
+           descripcion_legible, origen)
+           VALUES (?, 'MODIFICACION', 'ventas', ?, ?, 'POS')"#,
+        rusqlite::params![
+            usuario_id, venta_id,
+            format!("Venta {} modificada — Total anterior: ${:.2} → Nuevo total: ${:.2}",
+                folio, total_anterior, nuevo_total)
+        ],
+    );
+
+    db.execute("COMMIT", []).map_err(|e| e.to_string())?;
+    Ok(true)
+}
+
 /// Buscar ventas por folio / rango de fechas / cliente (histórico completo)
 #[tauri::command]
 pub fn buscar_ventas(

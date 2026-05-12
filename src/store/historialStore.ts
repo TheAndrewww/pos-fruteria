@@ -104,6 +104,7 @@ interface HistorialState {
   buscarVentas: (filtros: FiltrosBusqueda) => Promise<VentaResumen[]>;
   obtenerDetalleVenta: (ventaId: number) => Promise<VentaDetalleCompleto>;
   obtenerDetalleCached: (ventaId: number) => Promise<VentaDetalleCompleto>;
+  invalidarCache: (ventaId: number) => void;
   anularVenta: (ventaId: number, usuarioId: number, motivo: string) => Promise<boolean>;
   crearDevolucion: (datos: NuevaDevolucion) => Promise<DevolucionCreada>;
   listarDevoluciones: (limite?: number) => Promise<void>;
@@ -144,6 +145,13 @@ export const useHistorialStore = create<HistorialState>((set, get) => ({
     const detalle = await invoke<VentaDetalleCompleto>('obtener_detalle_venta', { ventaId });
     set((s) => ({ ventasDetalladas: { ...s.ventasDetalladas, [ventaId]: detalle } }));
     return detalle;
+  },
+
+  invalidarCache: (ventaId: number) => {
+    set((s) => {
+      const { [ventaId]: _, ...rest } = s.ventasDetalladas;
+      return { ventasDetalladas: rest };
+    });
   },
 
   anularVenta: async (ventaId, usuarioId, motivo) => {

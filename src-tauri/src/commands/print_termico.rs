@@ -130,6 +130,7 @@ pub fn generar_ticket_venta(datos: &DatosTicketTermico) -> Vec<u8> {
     linea_divisoria(&mut b, ancho);
 
     // ─── Info de venta ────────────────────────
+    negrita_on(&mut b);
     let _ = writeln!(b, "Folio: {}", datos.folio);
     let _ = writeln!(b, "Fecha: {}", datos.fecha);
     let _ = writeln!(b, "Cajero: {}", datos.usuario);
@@ -162,9 +163,10 @@ pub fn generar_ticket_venta(datos: &DatosTicketTermico) -> Vec<u8> {
     if datos.redondeo > 0.0 {
         linea_kv(&mut b, "Redondeo:", &format!("+${:.2}", datos.redondeo), ancho);
     }
+    doble_tamano(&mut b);
+    linea_kv(&mut b, "TOTAL:", &format!("${:.2}", datos.total), ancho / 2);
+    tamano_normal(&mut b);
     negrita_on(&mut b);
-    linea_kv(&mut b, "TOTAL:", &format!("${:.2}", datos.total), ancho);
-    negrita_off(&mut b);
     linea_kv(&mut b, "Pago:", &datos.metodo_pago, ancho);
 
     linea_divisoria(&mut b, ancho);

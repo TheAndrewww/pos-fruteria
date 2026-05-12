@@ -79,27 +79,27 @@ export function buildTicketHTML(negocio: ConfigNegocio, t: TicketData, logoSrc?:
 <style>
   @page { size: 80mm auto; margin: 0; }
   html, body { margin: 0; padding: 0; font-family: 'Courier New', monospace; color: #000; }
-  body { width: 72mm; padding: 3mm; font-size: 10pt; line-height: 1.3; }
+  body { width: 72mm; padding: 3mm; font-size: 11pt; line-height: 1.35; font-weight: 600; }
   .center { text-align: center; }
   .right { text-align: right; }
-  .bold { font-weight: 700; }
-  .big { font-size: 13pt; }
-  .xl { font-size: 15pt; }
-  .muted { font-size: 8pt; color: #333; }
-  .sep { border-top: 1px dashed #000; margin: 5px 0; }
-  .sep-thick { border-top: 2px solid #000; margin: 6px 0; }
-  .row { display: flex; justify-content: space-between; gap: 4px; }
-  .item { margin-bottom: 3px; }
-  .item-nom { font-size: 10pt; }
-  .item-row { display: flex; justify-content: space-between; font-size: 10pt; }
-  .item-sub { font-weight: 700; }
-  .total-row { font-size: 14pt; font-weight: 900; color: #000; }
-  .reprint { border: 1px solid #000; padding: 2px 6px; display: inline-block; font-size: 8pt; margin-bottom: 3px; }
+  .bold { font-weight: 900; }
+  .big { font-size: 14pt; }
+  .xl { font-size: 16pt; }
+  .muted { font-size: 9pt; color: #333; font-weight: 600; }
+  .sep { border-top: 1px dashed #000; margin: 6px 0; }
+  .sep-thick { border-top: 2px solid #000; margin: 7px 0; }
+  .row { display: flex; justify-content: space-between; gap: 4px; font-weight: 700; }
+  .item { margin-bottom: 4px; }
+  .item-nom { font-size: 11pt; font-weight: 700; }
+  .item-row { display: flex; justify-content: space-between; font-size: 11pt; font-weight: 600; }
+  .item-sub { font-weight: 900; }
+  .total-row { font-size: 16pt; font-weight: 900; color: #000; }
+  .reprint { border: 1px solid #000; padding: 2px 6px; display: inline-block; font-size: 9pt; margin-bottom: 3px; font-weight: 900; }
   .logo { width: 55mm; max-width: 80%; height: auto; margin: 4px auto; display: block; }
-  .brand-name { font-size: 13pt; font-weight: 900; letter-spacing: 0.5px; margin: 3px 0; color: #000; }
-  .brand-sub { font-size: 9pt; color: #000; font-weight: 700; letter-spacing: 1px; margin-bottom: 3px; }
-  .footer-msg { font-size: 10pt; font-weight: 600; margin: 5px 0 3px; }
-  .footer-brand { font-size: 8pt; color: #000; font-weight: 700; letter-spacing: 0.5px; margin-top: 5px; }
+  .brand-name { font-size: 14pt; font-weight: 900; letter-spacing: 0.5px; margin: 3px 0; color: #000; }
+  .brand-sub { font-size: 10pt; color: #000; font-weight: 800; letter-spacing: 1px; margin-bottom: 3px; }
+  .footer-msg { font-size: 11pt; font-weight: 800; margin: 6px 0 3px; }
+  .footer-brand { font-size: 9pt; color: #000; font-weight: 800; letter-spacing: 0.5px; margin-top: 5px; }
 </style></head><body>
   ${t.es_presupuesto ? '<div class="center"><span class="reprint">*** PRESUPUESTO ***</span><br><span style="font-size: 7pt; font-weight: bold; padding-top: 2px; display: inline-block;">Esta cotización puede variar sin previo aviso.</span></div>' : (t.reimpresion ? '<div class="center"><span class="reprint">*** REIMPRESIÓN ***</span></div>' : '')}
   <div class="center">

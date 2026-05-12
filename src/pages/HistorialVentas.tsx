@@ -10,7 +10,7 @@ import {
   DevolucionResumen,
 } from '../store/historialStore';
 import {
-  ScrollText, Search, RefreshCw, X, Ban, Undo2, CheckCircle2, Printer,
+  ScrollText, Search, RefreshCw, X, Ban, CheckCircle2, Printer, Pencil,
 } from 'lucide-react';
 import { imprimirTicket, type ConfigNegocio } from '../utils/ticket';
 
@@ -50,7 +50,7 @@ export default function HistorialVentas() {
   // Modal de detalle (para acciones, se usarán desde el detalle en línea)
   const [ventaSeleccionada, setVentaSeleccionada] = useState<VentaDetalleCompleto | null>(null);
   const [modalAnular, setModalAnular] = useState(false);
-  const [modalDevolver, setModalDevolver] = useState(false);
+  const [modalEditar, setModalEditar] = useState(false);
 
   const cargar = async () => {
     try {
@@ -236,7 +236,7 @@ export default function HistorialVentas() {
                             ventaId={v.id}
                             highlightTerm={articuloBuscado}
                             onAnular={(detalle) => { setVentaSeleccionada(detalle); setModalAnular(true); }}
-                            onDevolver={(detalle) => { setVentaSeleccionada(detalle); setModalDevolver(true); }}
+                            onEditar={(detalle) => { setVentaSeleccionada(detalle); setModalEditar(true); }}
                           />
                         </td>
                       </tr>
@@ -309,15 +309,15 @@ export default function HistorialVentas() {
         />
       )}
 
-      {/* Modal devolver */}
-      {ventaSeleccionada && modalDevolver && (
-        <ModalDevolverVenta
+      {/* Modal editar venta */}
+      {ventaSeleccionada && modalEditar && (
+        <ModalEditarVenta
           venta={ventaSeleccionada}
           usuarioId={usuario!.id}
           esAdmin={usuario?.es_admin ?? false}
-          onClose={() => setModalDevolver(false)}
+          onClose={() => setModalEditar(false)}
           onSuccess={() => {
-            setModalDevolver(false);
+            setModalEditar(false);
             setVentaSeleccionada(null);
             cargar();
           }}
@@ -330,12 +330,12 @@ export default function HistorialVentas() {
 // ─── Componente In-line: Detalle de venta ───────────────────
 
 function DetalleVentaInline({
-  ventaId, highlightTerm, onAnular, onDevolver,
+  ventaId, highlightTerm, onAnular, onEditar,
 }: {
   ventaId: number;
   highlightTerm?: string;
   onAnular: (v: VentaDetalleCompleto) => void;
-  onDevolver: (v: VentaDetalleCompleto) => void;
+  onEditar: (v: VentaDetalleCompleto) => void;
 }) {
   const { obtenerDetalleCached } = useHistorialStore();
   const [venta, setVenta] = useState<VentaDetalleCompleto | null>(null);
@@ -350,12 +350,8 @@ function DetalleVentaInline({
 
   if (!venta) return <div style={{ padding: 20, textAlign: 'center', color: 'var(--color-text-muted)' }}>Cargando detalles...</div>;
 
-  const hoy = new Date().toISOString().slice(0, 10);
-  const fechaVenta = venta.fecha.slice(0, 10);
-  const esHoy = fechaVenta === hoy;
-  const totalDisponibleADevolver = venta.items.reduce((s, i) => s + i.cantidad_disponible, 0);
-  const puedeDevolver = !venta.anulada && totalDisponibleADevolver > 0;
-  const puedeAnular = !venta.anulada && esHoy && venta.total_devuelto === 0;
+  const puedeEditar = !venta.anulada;
+  const puedeAnular = !venta.anulada;
 
   // Función para verificar si un item coincide con el término de búsqueda
   const itemCoincide = (it: VentaDetalleItem): boolean => {
@@ -445,14 +441,14 @@ function DetalleVentaInline({
           <button className="btn btn-outline btn-sm" onClick={handleReimprimir} title="Reimprimir ticket">
             <Printer size={14} /> Reimprimir
           </button>
-          {puedeDevolver && (
-            <button className="btn btn-sm" style={{ background: 'var(--color-warning)', color: '#fff', border: 'none' }} onClick={() => onDevolver(venta)}>
-              <Undo2 size={14} /> Devolución parcial
+          {puedeEditar && (
+            <button className="btn btn-sm" style={{ background: 'var(--color-warning)', color: '#fff', border: 'none' }} onClick={() => onEditar(venta)}>
+              <Pencil size={14} /> Modificar venta
             </button>
           )}
           {puedeAnular && (
             <button className="btn btn-danger btn-sm" onClick={() => onAnular(venta)}>
-              <Ban size={14} /> Anular venta
+              <Ban size={14} /> Cancelar venta
             </button>
           )}
         </div>
@@ -592,9 +588,9 @@ function ModalAnularVenta({
   );
 }
 
-// ─── Modal: Devolución parcial ────────────────────────────
+// ─── Modal: Editar venta ─────────────────────────────────
 
-function ModalDevolverVenta({
+function ModalEditarVenta({
   venta, usuarioId, esAdmin, onClose, onSuccess,
 }: {
   venta: VentaDetalleCompleto;
@@ -603,66 +599,58 @@ function ModalDevolverVenta({
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  const [cantidades, setCantidades] = useState<Record<number, number>>({});
-  const [motivo, setMotivo] = useState('');
+  const [precios, setPrecios] = useState<Record<number, string>>(() => {
+    const init: Record<number, string> = {};
+    venta.items.forEach(it => { init[it.id] = it.precio_final.toFixed(2); });
+    return init;
+  });
+  const [cantidades, setCantidades] = useState<Record<number, string>>(() => {
+    const init: Record<number, string> = {};
+    venta.items.forEach(it => { init[it.id] = it.cantidad.toString(); });
+    return init;
+  });
   const [pin, setPin] = useState('');
   const [procesando, setProcesando] = useState(false);
 
-  const itemsDisponibles = venta.items.filter(i => i.cantidad_disponible > 0);
-
-  const total = itemsDisponibles.reduce((s, it) => {
-    const c = cantidades[it.id] || 0;
-    return s + c * it.precio_final;
+  const nuevoTotal = venta.items.reduce((s, it) => {
+    const precio = parseFloat(precios[it.id] || '0') || 0;
+    const cantidad = parseFloat(cantidades[it.id] || '0') || 0;
+    return s + precio * cantidad;
   }, 0);
 
-  const hayAlgo = Object.values(cantidades).some(v => v > 0);
-
-  const setCantidad = (item: VentaDetalleItem, valor: number) => {
-    const clamp = Math.max(0, Math.min(item.cantidad_disponible, valor));
-    setCantidades(prev => ({ ...prev, [item.id]: clamp }));
-  };
+  const hayCambios = venta.items.some(it => {
+    const precioNuevo = parseFloat(precios[it.id] || '0');
+    const cantidadNueva = parseFloat(cantidades[it.id] || '0');
+    return Math.abs(precioNuevo - it.precio_final) > 0.001 || Math.abs(cantidadNueva - it.cantidad) > 0.001;
+  });
 
   const confirmar = async () => {
-    if (!motivo.trim()) {
-      alert('El motivo es obligatorio');
-      return;
-    }
-    if (!hayAlgo) {
-      alert('Debes indicar al menos un producto a devolver');
-      return;
-    }
     setProcesando(true);
     try {
-      let autorizadoPor: number | null = null;
       if (!esAdmin) {
-        const id = await invoke<number | null>('resolver_dueno_por_pin', { pin });
-        if (!id) {
+        const ok = await invoke<boolean>('verificar_pin_dueno', { pin });
+        if (!ok) {
           alert('PIN del dueño incorrecto');
           setProcesando(false);
           return;
         }
-        autorizadoPor = id;
       }
-      const items = Object.entries(cantidades)
-        .filter(([_, c]) => c > 0)
-        .map(([id, cantidad]) => ({
-          venta_detalle_id: Number(id),
-          cantidad: Number(cantidad),
-        }));
-
-      await invoke('crear_devolucion', {
-        datos: {
-          venta_id: venta.id,
-          usuario_id: usuarioId,
-          autorizado_por: autorizadoPor,
-          motivo,
-          items,
-        },
+      const items = venta.items.map(it => ({
+        venta_detalle_id: it.id,
+        precio_final: parseFloat(precios[it.id] || '0'),
+        cantidad: parseFloat(cantidades[it.id] || '0'),
+      }));
+      await invoke('modificar_venta', {
+        ventaId: venta.id,
+        usuarioId,
+        items,
       });
-      alert('Devolución registrada. Se generó un RETIRO de caja por ' + fmt(total));
+      // Invalidar cache del historial
+      useHistorialStore.getState().invalidarCache(venta.id);
+      alert('Venta modificada exitosamente');
       onSuccess();
     } catch (e: any) {
-      alert('Error al devolver: ' + e);
+      alert('Error al modificar: ' + e);
       setProcesando(false);
     }
   };
@@ -671,8 +659,8 @@ function ModalDevolverVenta({
     <ModalWrapper onClose={onClose} maxWidth={680}>
       <div style={modalHeaderStyle}>
         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--color-warning)' }}>
-          <Undo2 size={16} style={{ verticalAlign: 'middle', marginRight: 6 }} />
-          Devolución parcial — {venta.folio}
+          <Pencil size={16} style={{ verticalAlign: 'middle', marginRight: 6 }} />
+          Modificar venta — {venta.folio}
         </h3>
         <button className="btn btn-ghost btn-sm" onClick={onClose}><X size={16} /></button>
       </div>
@@ -682,49 +670,64 @@ function ModalDevolverVenta({
           padding: 10, borderRadius: 6, background: 'rgba(245,158,11,0.08)',
           border: '1px solid rgba(245,158,11,0.25)', fontSize: 12, marginBottom: 12,
         }}>
-          Indica la cantidad a devolver por cada producto. Se restaurará el stock y se registrará un RETIRO automático de caja por el monto devuelto.
+          Modifica el precio o la cantidad de cada producto. El total de la venta se recalculará automáticamente.
         </div>
 
-        <div style={{ maxHeight: 280, overflow: 'auto' }}>
+        <div style={{ maxHeight: 350, overflow: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
                 <th style={{ padding: '6px 4px', textAlign: 'left' }}>Producto</th>
-                <th style={{ padding: '6px 4px', textAlign: 'right' }}>Vendido</th>
-                <th style={{ padding: '6px 4px', textAlign: 'right' }}>Disponible</th>
-                <th style={{ padding: '6px 4px', textAlign: 'center' }}>A devolver</th>
-                <th style={{ padding: '6px 4px', textAlign: 'right' }}>P. unit.</th>
+                <th style={{ padding: '6px 4px', textAlign: 'center' }}>Cantidad</th>
+                <th style={{ padding: '6px 4px', textAlign: 'center' }}>Precio unit.</th>
                 <th style={{ padding: '6px 4px', textAlign: 'right' }}>Subtotal</th>
               </tr>
             </thead>
             <tbody>
               {venta.items.map(it => {
-                const c = cantidades[it.id] || 0;
-                const disabled = it.cantidad_disponible <= 0;
+                const precio = parseFloat(precios[it.id] || '0') || 0;
+                const cantidad = parseFloat(cantidades[it.id] || '0') || 0;
+                const sub = precio * cantidad;
+                const precioModificado = Math.abs(precio - it.precio_final) > 0.001;
+                const cantModificada = Math.abs(cantidad - it.cantidad) > 0.001;
                 return (
-                  <tr key={it.id} style={{ borderBottom: '1px solid var(--color-border)', opacity: disabled ? 0.4 : 1 }}>
+                  <tr key={it.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                     <td style={{ padding: '6px 4px' }}>
                       <div style={{ fontWeight: 600 }}>{it.nombre}</div>
                       <div style={{ fontSize: 10, color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>{it.codigo}</div>
                     </td>
-                    <td style={{ padding: '6px 4px', textAlign: 'right' }}>{it.cantidad}</td>
-                    <td style={{ padding: '6px 4px', textAlign: 'right' }}>{it.cantidad_disponible}</td>
+                    <td style={{ padding: '6px 4px', textAlign: 'center' }}>
+                      <input
+                        type="number"
+                        min={0.001}
+                        step="any"
+                        value={cantidades[it.id] || ''}
+                        onChange={(e) => setCantidades(prev => ({ ...prev, [it.id]: e.target.value }))}
+                        className="input input-sm"
+                        style={{
+                          width: 80, textAlign: 'center',
+                          borderColor: cantModificada ? 'var(--color-warning)' : undefined,
+                          fontWeight: cantModificada ? 700 : 400,
+                        }}
+                      />
+                    </td>
                     <td style={{ padding: '6px 4px', textAlign: 'center' }}>
                       <input
                         type="number"
                         min={0}
-                        max={it.cantidad_disponible}
-                        step={1}
-                        value={c}
-                        disabled={disabled}
-                        onChange={(e) => setCantidad(it, Number(e.target.value))}
+                        step="any"
+                        value={precios[it.id] || ''}
+                        onChange={(e) => setPrecios(prev => ({ ...prev, [it.id]: e.target.value }))}
                         className="input input-sm"
-                        style={{ width: 70, textAlign: 'center' }}
+                        style={{
+                          width: 90, textAlign: 'center',
+                          borderColor: precioModificado ? 'var(--color-warning)' : undefined,
+                          fontWeight: precioModificado ? 700 : 400,
+                        }}
                       />
                     </td>
-                    <td style={{ padding: '6px 4px', textAlign: 'right' }}>{fmt(it.precio_final)}</td>
                     <td style={{ padding: '6px 4px', textAlign: 'right', fontWeight: 600 }}>
-                      {c > 0 ? fmt(c * it.precio_final) : '—'}
+                      {fmt(sub)}
                     </td>
                   </tr>
                 );
@@ -735,18 +738,6 @@ function ModalDevolverVenta({
       </div>
 
       <div style={{ padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div>
-          <label style={labelStyle}>Motivo de la devolución *</label>
-          <textarea
-            value={motivo}
-            onChange={(e) => setMotivo(e.target.value)}
-            placeholder="Ej: Producto defectuoso, cliente cambió de opinión, talla incorrecta..."
-            className="input"
-            rows={2}
-            style={{ width: '100%', resize: 'vertical' }}
-          />
-        </div>
-
         {!esAdmin && (
           <div>
             <label style={labelStyle}>PIN del dueño *</label>
@@ -767,10 +758,20 @@ function ModalDevolverVenta({
           padding: 10, borderRadius: 6, background: 'var(--color-surface-2)',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         }}>
-          <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>Total a reembolsar:</span>
-          <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--color-primary)' }}>
-            {fmt(total)}
-          </span>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>Total original: {fmt(venta.total)}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: nuevoTotal !== venta.total ? 'var(--color-warning)' : 'var(--color-text)' }}>
+              Nuevo total: {fmt(Math.ceil(nuevoTotal))}
+            </div>
+          </div>
+          {nuevoTotal !== venta.total && (
+            <span style={{
+              fontSize: 14, fontWeight: 700,
+              color: nuevoTotal < venta.total ? 'var(--color-success)' : 'var(--color-danger)',
+            }}>
+              {nuevoTotal < venta.total ? '-' : '+'}{fmt(Math.abs(Math.ceil(nuevoTotal) - venta.total))}
+            </span>
+          )}
         </div>
       </div>
 
@@ -783,10 +784,10 @@ function ModalDevolverVenta({
           className="btn"
           style={{ background: 'var(--color-warning)', color: '#fff' }}
           onClick={confirmar}
-          disabled={procesando || !hayAlgo || !motivo.trim() || (!esAdmin && pin.length !== 4)}
+          disabled={procesando || !hayCambios || (!esAdmin && pin.length !== 4)}
         >
           <CheckCircle2 size={14} />
-          {procesando ? 'Procesando...' : 'Confirmar devolución'}
+          {procesando ? 'Guardando...' : 'Guardar cambios'}
         </button>
       </div>
     </ModalWrapper>

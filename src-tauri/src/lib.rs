@@ -17,7 +17,7 @@ use commands::productos::{
 };
 use commands::ventas::{
     crear_venta, listar_ventas_dia, obtener_estadisticas_dia, anular_venta,
-    buscar_ventas, obtener_detalle_venta,
+    buscar_ventas, obtener_detalle_venta, modificar_venta,
 };
 use commands::devoluciones::{
     crear_devolucion, listar_devoluciones, obtener_detalle_devolucion,
@@ -169,6 +169,7 @@ pub fn run() {
             anular_venta,
             buscar_ventas,
             obtener_detalle_venta,
+            modificar_venta,
             // Devoluciones
             crear_devolucion,
             listar_devoluciones,
