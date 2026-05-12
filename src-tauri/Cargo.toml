@@ -1,6 +1,6 @@
 [package]
 name = "pos-fruteria"
-version = "0.4.1"
+version = "0.4.2"
 description = "POS Paulín Premium Fruits"
 authors = ["Paulín Premium Fruits"]
 edition = "2021"

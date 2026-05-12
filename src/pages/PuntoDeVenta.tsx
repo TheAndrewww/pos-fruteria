@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import { useProductStore, type Producto } from '../store/productStore';
 import { useVentaStore, useVentaActiva } from '../store/ventaStore';
 import { useAuthStore } from '../store/authStore';
-import { ShoppingCart, Minus, Plus, Trash2, CheckCircle2, Printer } from 'lucide-react';
+import { ShoppingCart, Minus, Plus, Trash2, CheckCircle2 } from 'lucide-react';
 import { invoke } from '../lib/invokeCompat';
-import { imprimirTicket, type ConfigNegocio, type TicketData } from '../utils/ticket';
+import { imprimirTicketAuto, type ConfigNegocio, type TicketData } from '../utils/ticket';
 import { NumpadModal } from '../components/Numpad';
 
 export default function PuntoDeVenta() {
@@ -25,7 +25,7 @@ export default function PuntoDeVenta() {
 
   const [showCobro, setShowCobro] = useState(false);
   const [configNegocio, setConfigNegocio] = useState<ConfigNegocio | null>(null);
-  const [ultimoTicket, setUltimoTicket] = useState<TicketData | null>(null);
+  const [, setUltimoTicket] = useState<TicketData | null>(null);
   const [cantidadModal, setCantidadModal] = useState<Producto | null>(null);
   const [taraModal, setTaraModal] = useState<{ index: number; item: typeof items[0] } | null>(null);
   const [precioModal, setPrecioModal] = useState<{ index: number; item: typeof items[0] } | null>(null);
@@ -116,27 +116,16 @@ export default function PuntoDeVenta() {
         monto_recibido: recibidoSnap, cambio: venta.cambio,
       };
       setUltimoTicket(ticket);
-      // Auto-imprimir ticket con config fresca
+      // Auto-imprimir ticket con config fresca (solo térmica, sin navegador)
       try {
         const cfg = await invoke<ConfigNegocio>('obtener_config_negocio');
         setConfigNegocio(cfg);
-        imprimirTicket(cfg, ticket).catch(() => {});
+        imprimirTicketAuto(cfg, ticket).catch(() => {});
       } catch {
-        if (configNegocio) imprimirTicket(configNegocio, ticket).catch(() => {});
+        if (configNegocio) imprimirTicketAuto(configNegocio, ticket).catch(() => {});
       }
     } catch (err: any) {
       alert(err.message);
-    }
-  };
-
-  const reimprimirUltimo = async () => {
-    if (!ultimoTicket) return;
-    try {
-      const cfg = await invoke<ConfigNegocio>('obtener_config_negocio');
-      setConfigNegocio(cfg);
-      imprimirTicket(cfg, { ...ultimoTicket, reimpresion: true });
-    } catch {
-      if (configNegocio) imprimirTicket(configNegocio, { ...ultimoTicket, reimpresion: true });
     }
   };
 
@@ -174,11 +163,6 @@ export default function PuntoDeVenta() {
           )}
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
-          {ultimoTicket && (
-            <button className="btn btn-ghost btn-lg" onClick={reimprimirUltimo}>
-              <Printer size={20} /> Imprimir
-            </button>
-          )}
           <button className="btn btn-primary btn-xl" onClick={cerrarVentaExitosa}>
             Nueva Venta
           </button>

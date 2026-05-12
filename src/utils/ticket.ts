@@ -139,43 +139,55 @@ export function buildTicketHTML(negocio: ConfigNegocio, t: TicketData, logoSrc?:
 </body></html>`;
 }
 
-export async function imprimirTicket(negocio: ConfigNegocio, data: TicketData): Promise<void> {
-  // 1) Si hay impresora térmica configurada, intentar ESC/POS directo (sin ventana).
+async function intentarImpresionTermica(negocio: ConfigNegocio, data: TicketData): Promise<boolean> {
   const impresora = (negocio.impresora_termica || '').trim();
-  if (impresora) {
-    try {
-      await invoke('imprimir_ticket_termico', {
-        datos: {
-          negocio_nombre: negocio.nombre,
-          negocio_direccion: negocio.direccion,
-          negocio_telefono: negocio.telefono,
-          negocio_rfc: negocio.rfc,
-          mensaje_pie: negocio.mensaje_pie,
-          folio: data.folio,
-          fecha: data.fecha,
-          usuario: data.usuario.split(' ')[0],
-          cliente: data.cliente ?? null,
-          items: data.items.map(i => ({
-            cantidad: i.cantidad,
-            nombre: i.nombre,
-            precio_unitario: i.precio_final,
-            subtotal: i.subtotal,
-          })),
-          subtotal: data.subtotal,
-          descuento: data.descuento,
-          redondeo: data.redondeo ?? 0,
-          total: data.total,
-          metodo_pago: data.metodo_pago,
-        },
-        impresora,
-      });
-      return; // Éxito — no abrimos nada más.
-    } catch (e) {
-      console.warn('Impresión térmica falló, usando fallback HTML:', e);
-      // Continúa al fallback de abajo.
-    }
+  if (!impresora) return false;
+  try {
+    await invoke('imprimir_ticket_termico', {
+      datos: {
+        negocio_nombre: negocio.nombre,
+        negocio_direccion: negocio.direccion,
+        negocio_telefono: negocio.telefono,
+        negocio_rfc: negocio.rfc,
+        mensaje_pie: negocio.mensaje_pie,
+        folio: data.folio,
+        fecha: data.fecha,
+        usuario: data.usuario.split(' ')[0],
+        cliente: data.cliente ?? null,
+        items: data.items.map(i => ({
+          cantidad: i.cantidad,
+          nombre: i.nombre,
+          precio_unitario: i.precio_final,
+          subtotal: i.subtotal,
+        })),
+        subtotal: data.subtotal,
+        descuento: data.descuento,
+        redondeo: data.redondeo ?? 0,
+        total: data.total,
+        metodo_pago: data.metodo_pago,
+      },
+      impresora,
+    });
+    return true;
+  } catch (e) {
+    console.warn('Impresión térmica falló:', e);
+    return false;
   }
-  // 2) Fallback: abrir ticket en navegador del sistema.
-  const logo = await getLogoDataUrl();
-  await printHTMLDialogOverlay(buildTicketHTML(negocio, data, logo));
+}
+
+/** Impresión automática al completar venta — solo térmica, sin abrir navegador. */
+export async function imprimirTicketAuto(negocio: ConfigNegocio, data: TicketData): Promise<void> {
+  const ok = await intentarImpresionTermica(negocio, data);
+  if (!ok) {
+    console.warn('Auto-impresión: no hay impresora térmica configurada o falló. Configúrala en Ajustes.');
+  }
+}
+
+/** Impresión manual (reimprimir) — térmica o fallback a navegador. */
+export async function imprimirTicket(negocio: ConfigNegocio, data: TicketData): Promise<void> {
+  const ok = await intentarImpresionTermica(negocio, data);
+  if (!ok) {
+    const logo = await getLogoDataUrl();
+    await printHTMLDialogOverlay(buildTicketHTML(negocio, data, logo));
+  }
 }

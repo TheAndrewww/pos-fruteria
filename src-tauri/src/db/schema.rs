@@ -73,13 +73,16 @@ CREATE TABLE IF NOT EXISTS config_descuentos (
 -- CONFIGURACIÓN DEL NEGOCIO (para tickets)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS config_negocio (
-    id          INTEGER PRIMARY KEY DEFAULT 1,
-    nombre      TEXT NOT NULL DEFAULT 'Paulín Premium Fruits',
-    direccion   TEXT NOT NULL DEFAULT '',
-    telefono    TEXT NOT NULL DEFAULT '',
-    rfc         TEXT NOT NULL DEFAULT '',
-    mensaje_pie TEXT NOT NULL DEFAULT '¡Gracias por su compra!',
-    updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    id                    INTEGER PRIMARY KEY DEFAULT 1,
+    nombre                TEXT NOT NULL DEFAULT 'Paulín Premium Fruits',
+    direccion             TEXT NOT NULL DEFAULT '',
+    telefono              TEXT NOT NULL DEFAULT '',
+    rfc                   TEXT NOT NULL DEFAULT '',
+    mensaje_pie           TEXT NOT NULL DEFAULT '¡Gracias por su compra!',
+    respaldo_auto_activo  INTEGER NOT NULL DEFAULT 1,
+    respaldo_auto_hora    TEXT NOT NULL DEFAULT '23:00',
+    impresora_termica     TEXT NOT NULL DEFAULT '',
+    updated_at            TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- ============================================================
