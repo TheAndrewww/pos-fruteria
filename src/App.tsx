@@ -5,6 +5,7 @@ import { useAuthStore } from './store/authStore';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import UpdateChecker from './lib/UpdateChecker';
+import { TouchKeyboardProvider } from './components/TouchKeyboard';
 
 export default function App() {
   const { usuario } = useAuthStore();
@@ -32,6 +33,7 @@ export default function App() {
   }
 
   // Si no hay usuario autenticado → Login (con checker arriba para no bloquear)
+  // Login tiene su propio PIN pad, no necesita teclado virtual
   if (!usuario) {
     return (
       <>
@@ -41,11 +43,14 @@ export default function App() {
     );
   }
 
-  // Si hay usuario → Dashboard principal
+  // Si hay usuario → Dashboard principal con teclado virtual global
   return (
     <>
       <UpdateChecker />
-      <Dashboard />
+      <TouchKeyboardProvider>
+        <Dashboard />
+      </TouchKeyboardProvider>
     </>
   );
 }
+

@@ -153,7 +153,7 @@ export function NumpadModal({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="card animate-scale-in" style={{
+      <div className="card animate-scale-in numpad-modal-content" style={{
         width: 320, padding: 24, maxHeight: '90vh', overflow: 'auto',
       }} onClick={e => e.stopPropagation()}>
         {title && (

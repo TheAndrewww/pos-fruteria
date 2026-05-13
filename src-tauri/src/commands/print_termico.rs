@@ -11,6 +11,7 @@ use tauri::State;
 use super::auth::AppState;
 use std::io::Write;
 use std::process::Command;
+use base64::Engine as _;
 
 // ─── Constantes ESC/POS ─────────────────────────────────────
 const ESC: u8 = 0x1B;
@@ -344,6 +345,89 @@ pub fn imprimir_ticket_termico(
     let bytes = generar_ticket_venta(&datos);
     enviar_bytes_a_impresora(&bytes, impresora.trim())?;
     log::info!("Ticket térmico impreso en '{}' ({} bytes)", impresora, bytes.len());
+    Ok(())
+}
+
+/// Imprime una imagen PNG (renderizada desde HTML via html2canvas) como
+/// bitmap raster ESC/POS. Esto permite tickets con diseño HTML completo
+/// (logo, fuentes, CSS) sin abrir ninguna ventana de navegador.
+#[tauri::command]
+pub fn imprimir_ticket_imagen(
+    imagen_base64: String,
+    impresora: String,
+) -> Result<(), String> {
+    if impresora.trim().is_empty() {
+        return Err("Debes especificar una impresora".into());
+    }
+
+    // 1) Decodificar base64 → bytes PNG
+    let png_bytes = base64::Engine::decode(
+        &base64::engine::general_purpose::STANDARD,
+        &imagen_base64,
+    ).map_err(|e| format!("Error decodificando base64: {}", e))?;
+
+    // 2) Cargar PNG con image crate
+    let img = image::load_from_memory_with_format(&png_bytes, image::ImageFormat::Png)
+        .map_err(|e| format!("Error cargando imagen: {}", e))?;
+
+    // 3) Redimensionar a 576px de ancho (80mm a 203 DPI)
+    let target_width = 576u32;
+    let aspect = img.height() as f64 / img.width() as f64;
+    let target_height = (target_width as f64 * aspect) as u32;
+    let resized = image::imageops::resize(
+        &img.to_luma8(),
+        target_width,
+        target_height,
+        image::imageops::FilterType::Lanczos3,
+    );
+
+    // 4) Convertir a bitmap 1-bit monochrome con threshold
+    //    y generar bytes ESC/POS raster (GS v 0)
+    let width_bytes = (target_width + 7) / 8; // bytes por línea (72 para 576px)
+    let height = resized.height();
+
+    let mut esc_bytes: Vec<u8> = Vec::with_capacity((width_bytes * height + 256) as usize);
+
+    // ESC @ — reset impresora
+    esc_bytes.extend_from_slice(&[ESC, b'@']);
+
+    // GS v 0 — raster bit image
+    // m=0 (normal), xL xH = width_bytes, yL yH = height
+    esc_bytes.extend_from_slice(&[GS, b'v', b'0', 0]); // GS v 0 m=0
+    esc_bytes.push((width_bytes & 0xFF) as u8);          // xL
+    esc_bytes.push(((width_bytes >> 8) & 0xFF) as u8);   // xH
+    esc_bytes.push((height & 0xFF) as u8);               // yL
+    esc_bytes.push(((height >> 8) & 0xFF) as u8);        // yH
+
+    // Datos del bitmap: cada bit = 1 pixel, 1 = negro, 0 = blanco
+    // Threshold: pixel < 128 → negro (bit=1)
+    for y in 0..height {
+        for x_byte in 0..width_bytes {
+            let mut byte: u8 = 0;
+            for bit in 0..8u32 {
+                let x = x_byte * 8 + bit;
+                if x < target_width {
+                    let pixel = resized.get_pixel(x, y).0[0];
+                    // Invertir: en ESC/POS 1=negro, pero en la imagen 0=negro
+                    if pixel < 128 {
+                        byte |= 0x80 >> bit;
+                    }
+                }
+            }
+            esc_bytes.push(byte);
+        }
+    }
+
+    // Alimentar papel + cortar
+    esc_bytes.extend_from_slice(b"\n\n\n");
+    cortar_papel(&mut esc_bytes);
+
+    // 5) Enviar a la impresora
+    enviar_bytes_a_impresora(&esc_bytes, impresora.trim())?;
+    log::info!(
+        "Ticket imagen impreso en '{}' ({}x{} px, {} bytes ESC/POS)",
+        impresora, target_width, height, esc_bytes.len()
+    );
     Ok(())
 }
 

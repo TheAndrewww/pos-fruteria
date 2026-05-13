@@ -1,5 +1,9 @@
-// utils/ticket.ts — Impresión de ticket (térmica ESC/POS o HTML fallback)
+// utils/ticket.ts — Impresión de ticket con diseño HTML completo
+//
+// Flujo: HTML → html2canvas (render invisible) → PNG base64 → Rust ESC/POS raster → impresora
+// Resultado: ticket con logo, fuentes y diseño CSS impreso directo sin abrir navegador.
 
+import html2canvas from 'html2canvas';
 import { printHTMLDialogOverlay, escapeHTML } from './print';
 import { invoke } from '../lib/invokeCompat';
 
@@ -60,6 +64,8 @@ async function getLogoDataUrl(): Promise<string> {
     return '';
   }
 }
+
+// ─── HTML del ticket (diseño bonito para render) ─────────────
 
 export function buildTicketHTML(negocio: ConfigNegocio, t: TicketData, logoSrc?: string): string {
   const metodo = t.metodo_pago.charAt(0).toUpperCase() + t.metodo_pago.slice(1);
@@ -139,43 +145,107 @@ export function buildTicketHTML(negocio: ConfigNegocio, t: TicketData, logoSrc?:
 </body></html>`;
 }
 
-async function intentarImpresionTermica(negocio: ConfigNegocio, data: TicketData): Promise<boolean> {
-  const impresora = (negocio.impresora_termica || '').trim();
-  if (!impresora) return false;
+// ─── Renderizar HTML a imagen PNG (base64) ───────────────────
+
+/**
+ * Crea un div oculto en el DOM, inyecta el HTML del ticket,
+ * usa html2canvas para capturarlo como imagen, y devuelve el PNG en base64.
+ */
+async function renderTicketToBase64(html: string): Promise<string> {
+  // Crear contenedor oculto que simula el ancho del papel térmico
+  const container = document.createElement('div');
+  container.style.cssText = `
+    position: fixed;
+    top: -9999px;
+    left: -9999px;
+    width: 576px;
+    background: white;
+    z-index: -1;
+    font-family: 'Courier New', monospace;
+  `;
+
+  // Extraer el <body> content del HTML completo
+  const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+  const bodyContent = bodyMatch ? bodyMatch[1] : html;
+
+  // Extraer estilos del <style> tag
+  const styleMatch = html.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+  const styles = styleMatch ? styleMatch[1] : '';
+
+  // Inyectar estilos dentro del contenedor
+  const styleEl = document.createElement('style');
+  styleEl.textContent = `
+    ${styles}
+    /* Overrides para el render a 576px */
+    body, .ticket-render {
+      width: 576px !important;
+      padding: 16px !important;
+      margin: 0 !important;
+      font-size: 14pt !important;
+      line-height: 1.4 !important;
+      font-weight: 600 !important;
+      color: #000 !important;
+      background: #fff !important;
+    }
+    .logo { width: 400px !important; max-width: 80% !important; }
+    .brand-name { font-size: 18pt !important; }
+    .brand-sub { font-size: 13pt !important; }
+    .total-row { font-size: 20pt !important; }
+    .muted { font-size: 12pt !important; }
+    .item-nom { font-size: 14pt !important; }
+    .item-row { font-size: 14pt !important; }
+    .row { font-size: 14pt !important; }
+    .sep { border-top: 2px dashed #000 !important; margin: 10px 0 !important; }
+    .sep-thick { border-top: 3px solid #000 !important; margin: 12px 0 !important; }
+    .footer-msg { font-size: 14pt !important; }
+    .footer-brand { font-size: 12pt !important; }
+    .reprint { font-size: 12pt !important; }
+  `;
+
+  // Crear el wrapper con clase para los estilos
+  const wrapper = document.createElement('div');
+  wrapper.className = 'ticket-render';
+  wrapper.innerHTML = bodyContent;
+
+  container.appendChild(styleEl);
+  container.appendChild(wrapper);
+  document.body.appendChild(container);
+
+  // Esperar a que las imágenes carguen
+  const images = container.querySelectorAll('img');
+  await Promise.all(Array.from(images).map(img =>
+    img.complete ? Promise.resolve() : new Promise<void>((resolve) => {
+      img.onload = () => resolve();
+      img.onerror = () => resolve();
+    })
+  ));
+
+  // Pequeño delay para asegurar que el layout está listo
+  await new Promise(r => setTimeout(r, 50));
+
   try {
-    await invoke('imprimir_ticket_termico', {
-      datos: {
-        negocio_nombre: negocio.nombre,
-        negocio_direccion: negocio.direccion,
-        negocio_telefono: negocio.telefono,
-        negocio_rfc: negocio.rfc,
-        mensaje_pie: negocio.mensaje_pie,
-        folio: data.folio,
-        fecha: data.fecha,
-        usuario: data.usuario.split(' ')[0],
-        cliente: data.cliente ?? null,
-        items: data.items.map(i => ({
-          cantidad: i.cantidad,
-          nombre: i.nombre,
-          precio_unitario: i.precio_final,
-          subtotal: i.subtotal,
-        })),
-        subtotal: data.subtotal,
-        descuento: data.descuento,
-        redondeo: data.redondeo ?? 0,
-        total: data.total,
-        metodo_pago: data.metodo_pago,
-      },
-      impresora,
+    // Renderizar con html2canvas
+    const canvas = await html2canvas(wrapper, {
+      backgroundColor: '#ffffff',
+      scale: 2, // 2x para buena calidad
+      width: 576,
+      useCORS: true,
+      logging: false,
     });
-    return true;
-  } catch (e) {
-    console.warn('Impresión térmica falló:', e);
-    return false;
+
+    // Convertir a PNG base64 (sin el prefijo data:image/png;base64,)
+    const dataUrl = canvas.toDataURL('image/png');
+    const base64 = dataUrl.split(',')[1];
+    return base64;
+  } finally {
+    // Limpiar el contenedor del DOM
+    document.body.removeChild(container);
   }
 }
 
-/** Impresión automática al completar venta — solo térmica, sin abrir navegador.
+// ─── Impresión automática (al completar venta) ──────────────
+
+/** Impresión automática al completar venta — renderiza HTML a imagen y envía directo.
  *  Devuelve `null` si se imprimió bien, o un string con el error para que la UI lo muestre. */
 export async function imprimirTicketAuto(negocio: ConfigNegocio, data: TicketData): Promise<string | null> {
   const impresora = (negocio.impresora_termica || '').trim();
@@ -183,31 +253,21 @@ export async function imprimirTicketAuto(negocio: ConfigNegocio, data: TicketDat
     return 'no_printer';
   }
   try {
-    await invoke('imprimir_ticket_termico', {
-      datos: {
-        negocio_nombre: negocio.nombre,
-        negocio_direccion: negocio.direccion,
-        negocio_telefono: negocio.telefono,
-        negocio_rfc: negocio.rfc,
-        mensaje_pie: negocio.mensaje_pie,
-        folio: data.folio,
-        fecha: data.fecha,
-        usuario: data.usuario.split(' ')[0],
-        cliente: data.cliente ?? null,
-        items: data.items.map(i => ({
-          cantidad: i.cantidad,
-          nombre: i.nombre,
-          precio_unitario: i.precio_final,
-          subtotal: i.subtotal,
-        })),
-        subtotal: data.subtotal,
-        descuento: data.descuento,
-        redondeo: data.redondeo ?? 0,
-        total: data.total,
-        metodo_pago: data.metodo_pago,
-      },
+    // 1) Obtener logo
+    const logo = await getLogoDataUrl();
+
+    // 2) Generar HTML del ticket
+    const html = buildTicketHTML(negocio, data, logo);
+
+    // 3) Renderizar a imagen PNG via html2canvas
+    const imagenBase64 = await renderTicketToBase64(html);
+
+    // 4) Enviar imagen a Rust para impresión ESC/POS raster
+    await invoke('imprimir_ticket_imagen', {
+      imagenBase64,
       impresora,
     });
+
     return null; // éxito
   } catch (e: any) {
     const msg = typeof e === 'string' ? e : e?.message || 'Error desconocido';
@@ -216,11 +276,31 @@ export async function imprimirTicketAuto(negocio: ConfigNegocio, data: TicketDat
   }
 }
 
-/** Impresión manual (reimprimir) — térmica o fallback a navegador. */
+// ─── Impresión manual (reimprimir) ──────────────────────────
+
+/** Impresión manual (reimprimir) — usa imagen si hay impresora, o fallback a navegador. */
 export async function imprimirTicket(negocio: ConfigNegocio, data: TicketData): Promise<void> {
-  const ok = await intentarImpresionTermica(negocio, data);
-  if (!ok) {
-    const logo = await getLogoDataUrl();
-    await printHTMLDialogOverlay(buildTicketHTML(negocio, data, logo));
+  const impresora = (negocio.impresora_termica || '').trim();
+
+  if (impresora) {
+    // Intentar impresión por imagen
+    try {
+      const logo = await getLogoDataUrl();
+      const html = buildTicketHTML(negocio, data, logo);
+      const imagenBase64 = await renderTicketToBase64(html);
+
+      await invoke('imprimir_ticket_imagen', {
+        imagenBase64,
+        impresora,
+      });
+      return; // Éxito
+    } catch (e) {
+      console.warn('Impresión por imagen falló, usando fallback HTML:', e);
+      // Continúa al fallback
+    }
   }
+
+  // Fallback: abrir ticket en navegador
+  const logo = await getLogoDataUrl();
+  await printHTMLDialogOverlay(buildTicketHTML(negocio, data, logo));
 }
