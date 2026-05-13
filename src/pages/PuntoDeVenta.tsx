@@ -118,23 +118,19 @@ export default function PuntoDeVenta() {
       };
       setUltimoTicket(ticket);
       setPrintError(null);
-      // Auto-imprimir ticket con config fresca (solo térmica, sin navegador)
-      try {
-        const cfg = await invoke<ConfigNegocio>('obtener_config_negocio');
-        setConfigNegocio(cfg);
-        const err = await imprimirTicketAuto(cfg, ticket);
-        if (err === 'no_printer') {
-          setPrintError('Sin impresora configurada. Ve a Ajustes → Impresora térmica.');
-        } else if (err) {
-          setPrintError(`Error al imprimir: ${err}`);
-        }
-      } catch {
-        if (configNegocio) {
-          const err = await imprimirTicketAuto(configNegocio, ticket);
-          if (err && err !== 'no_printer') setPrintError(`Error al imprimir: ${err}`);
-          else if (err === 'no_printer') setPrintError('Sin impresora configurada.');
-        }
-      }
+      // Auto-imprimir ticket en segundo plano (no bloquea la UI)
+      const imprimirEnFondo = (cfg: ConfigNegocio) => {
+        imprimirTicketAuto(cfg, ticket).then(err => {
+          if (err === 'no_printer') {
+            setPrintError('Sin impresora configurada. Ve a Ajustes → Impresora térmica.');
+          } else if (err) {
+            setPrintError(`Error al imprimir: ${err}`);
+          }
+        });
+      };
+      invoke<ConfigNegocio>('obtener_config_negocio')
+        .then(cfg => { setConfigNegocio(cfg); imprimirEnFondo(cfg); })
+        .catch(() => { if (configNegocio) imprimirEnFondo(configNegocio); });
     } catch (err: any) {
       alert(err.message);
     }

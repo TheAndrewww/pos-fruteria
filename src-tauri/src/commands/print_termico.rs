@@ -1,8 +1,8 @@
 // commands/print_termico.rs — Impresión térmica ESC/POS real
 //
 // Estrategia: genera bytes ESC/POS crudos y los envía al spooler del SO.
+// - Windows: FFI directo a winspool.drv (WritePrinter) — instantáneo
 // - macOS/Linux: `lp -d <printer> -o raw <file>`
-// - Windows: `copy /B <file> \\localhost\<printer>` (o PowerShell Out-Printer)
 //
 // No depende de crates externos — ESC/POS es un protocolo muy estable.
 
@@ -187,128 +187,92 @@ pub fn generar_ticket_venta(datos: &DatosTicketTermico) -> Vec<u8> {
 
 // ─── Envío al spooler ────────────────────────────────────────
 
-/// Script PowerShell que usa la API Win32 `WritePrinter` para enviar bytes
-/// RAW a la impresora, sin necesidad de compartirla en red.
+// ─── Win32 RAW Printing (FFI directo, sin PowerShell) ───────
 #[cfg(target_os = "windows")]
-const PS_RAW_PRINT_SCRIPT: &str = r#"
-param([string]$PrinterName, [string]$FilePath)
+mod win_raw_print {
+    use std::ptr;
 
-Add-Type -TypeDefinition @'
-using System;
-using System.IO;
-using System.Runtime.InteropServices;
-
-public class RawPrinterHelper {
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    public struct DOCINFOW {
-        [MarshalAs(UnmanagedType.LPWStr)] public string pDocName;
-        [MarshalAs(UnmanagedType.LPWStr)] public string pOutputFile;
-        [MarshalAs(UnmanagedType.LPWStr)] public string pDatatype;
+    /// DOC_INFO_1W — estructura que describe el documento a imprimir.
+    #[repr(C)]
+    struct DocInfo1W {
+        doc_name:    *const u16,
+        output_file: *const u16,
+        datatype:    *const u16,
     }
 
-    [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
-    public static extern bool OpenPrinter(string pPrinterName, out IntPtr phPrinter, IntPtr pDefault);
-    [DllImport("winspool.drv", SetLastError = true)]
-    public static extern bool ClosePrinter(IntPtr hPrinter);
-    [DllImport("winspool.drv", CharSet = CharSet.Unicode, SetLastError = true)]
-    public static extern bool StartDocPrinter(IntPtr hPrinter, int level, ref DOCINFOW pDocInfo);
-    [DllImport("winspool.drv", SetLastError = true)]
-    public static extern bool EndDocPrinter(IntPtr hPrinter);
-    [DllImport("winspool.drv", SetLastError = true)]
-    public static extern bool StartPagePrinter(IntPtr hPrinter);
-    [DllImport("winspool.drv", SetLastError = true)]
-    public static extern bool EndPagePrinter(IntPtr hPrinter);
-    [DllImport("winspool.drv", SetLastError = true)]
-    public static extern bool WritePrinter(IntPtr hPrinter, IntPtr pBytes, int dwCount, out int dwWritten);
+    #[link(name = "winspool")]
+    extern "system" {
+        fn OpenPrinterW(printer: *const u16, handle: *mut isize, default: *const u8) -> i32;
+        fn ClosePrinter(handle: isize) -> i32;
+        fn StartDocPrinterW(handle: isize, level: u32, doc_info: *const DocInfo1W) -> u32;
+        fn EndDocPrinter(handle: isize) -> i32;
+        fn StartPagePrinter(handle: isize) -> i32;
+        fn EndPagePrinter(handle: isize) -> i32;
+        fn WritePrinter(handle: isize, buf: *const u8, count: u32, written: *mut u32) -> i32;
+    }
 
-    public static void SendRawData(string printerName, byte[] data) {
-        IntPtr hPrinter;
-        if (!OpenPrinter(printerName, out hPrinter, IntPtr.Zero)) {
-            int err = Marshal.GetLastWin32Error();
-            throw new Exception("No se pudo abrir la impresora '" + printerName + "' (Win32 error " + err + ")");
-        }
-        try {
-            DOCINFOW di = new DOCINFOW();
-            di.pDocName = "POS Ticket";
-            di.pOutputFile = null;
-            di.pDatatype = "RAW";
-            if (!StartDocPrinter(hPrinter, 1, ref di)) {
-                throw new Exception("StartDocPrinter fallo (error " + Marshal.GetLastWin32Error() + ")");
+    /// Convierte &str a wide string (UTF-16 null-terminated).
+    fn wide(s: &str) -> Vec<u16> {
+        s.encode_utf16().chain(std::iter::once(0)).collect()
+    }
+
+    /// Envía bytes RAW directamente al spooler de Windows (~1ms).
+    pub fn send(printer_name: &str, data: &[u8]) -> Result<(), String> {
+        let printer_w = wide(printer_name);
+        let doc_name_w = wide("POS Ticket");
+        let datatype_w = wide("RAW");
+
+        unsafe {
+            // Abrir impresora
+            let mut handle: isize = 0;
+            if OpenPrinterW(printer_w.as_ptr(), &mut handle, ptr::null()) == 0 {
+                let err = std::io::Error::last_os_error();
+                return Err(format!("No se pudo abrir '{}': {}", printer_name, err));
             }
-            try {
-                if (!StartPagePrinter(hPrinter)) {
-                    throw new Exception("StartPagePrinter fallo (error " + Marshal.GetLastWin32Error() + ")");
-                }
-                IntPtr pBuf = Marshal.AllocCoTaskMem(data.Length);
-                try {
-                    Marshal.Copy(data, 0, pBuf, data.Length);
-                    int written;
-                    if (!WritePrinter(hPrinter, pBuf, data.Length, out written)) {
-                        throw new Exception("WritePrinter fallo (error " + Marshal.GetLastWin32Error() + ")");
-                    }
-                } finally {
-                    Marshal.FreeCoTaskMem(pBuf);
-                }
-                EndPagePrinter(hPrinter);
-            } finally {
-                EndDocPrinter(hPrinter);
+
+            // StartDoc
+            let doc_info = DocInfo1W {
+                doc_name: doc_name_w.as_ptr(),
+                output_file: ptr::null(),
+                datatype: datatype_w.as_ptr(),
+            };
+            if StartDocPrinterW(handle, 1, &doc_info) == 0 {
+                let err = std::io::Error::last_os_error();
+                ClosePrinter(handle);
+                return Err(format!("StartDocPrinter falló: {}", err));
             }
-        } finally {
-            ClosePrinter(hPrinter);
+
+            // StartPage
+            if StartPagePrinter(handle) == 0 {
+                let err = std::io::Error::last_os_error();
+                EndDocPrinter(handle);
+                ClosePrinter(handle);
+                return Err(format!("StartPagePrinter falló: {}", err));
+            }
+
+            // Escribir bytes
+            let mut written: u32 = 0;
+            if WritePrinter(handle, data.as_ptr(), data.len() as u32, &mut written) == 0 {
+                let err = std::io::Error::last_os_error();
+                EndPagePrinter(handle);
+                EndDocPrinter(handle);
+                ClosePrinter(handle);
+                return Err(format!("WritePrinter falló: {}", err));
+            }
+
+            // Cerrar todo
+            EndPagePrinter(handle);
+            EndDocPrinter(handle);
+            ClosePrinter(handle);
         }
+
+        Ok(())
     }
 }
-'@
-
-$bytes = [System.IO.File]::ReadAllBytes($FilePath)
-[RawPrinterHelper]::SendRawData($PrinterName, $bytes)
-Write-Output "PRINT_OK"
-"#;
 
 #[cfg(target_os = "windows")]
 fn enviar_bytes_a_impresora(bytes: &[u8], impresora: &str) -> Result<(), String> {
-    use std::io::Write as _;
-
-    // 1. Escribir datos ESC/POS a archivo temporal
-    let mut tmp_data = std::env::temp_dir();
-    tmp_data.push(format!("pos_ticket_{}.prn", chrono::Local::now().timestamp_nanos_opt().unwrap_or(0)));
-    {
-        let mut f = std::fs::File::create(&tmp_data).map_err(|e| e.to_string())?;
-        f.write_all(bytes).map_err(|e| e.to_string())?;
-    }
-
-    // 2. Escribir script PowerShell a archivo temporal
-    let mut tmp_script = std::env::temp_dir();
-    tmp_script.push("pos_raw_print.ps1");
-    std::fs::write(&tmp_script, PS_RAW_PRINT_SCRIPT).map_err(|e| e.to_string())?;
-
-    // 3. Ejecutar con parámetros
-    let output = Command::new("powershell")
-        .args([
-            "-NoProfile", "-ExecutionPolicy", "Bypass",
-            "-File", &tmp_script.to_string_lossy(),
-            "-PrinterName", impresora,
-            "-FilePath", &tmp_data.to_string_lossy(),
-        ])
-        .output()
-        .map_err(|e| format!("No se pudo ejecutar PowerShell: {}", e))?;
-
-    let _ = std::fs::remove_file(&tmp_data);
-    // No borramos el script — se reutiliza
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-
-    if !output.status.success() || !stdout.contains("PRINT_OK") {
-        return Err(format!(
-            "Falló la impresión RAW en '{}'. {}{}",
-            impresora,
-            if !stderr.trim().is_empty() { stderr.trim() } else { &stdout }.to_string(),
-            if let Some(code) = output.status.code() { format!(" (exit {})", code) } else { String::new() }
-        ));
-    }
-
-    Ok(())
+    win_raw_print::send(impresora, bytes)
 }
 
 #[cfg(not(target_os = "windows"))]
