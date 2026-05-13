@@ -85,27 +85,27 @@ export function buildTicketHTML(negocio: ConfigNegocio, t: TicketData, logoSrc?:
 <style>
   @page { size: 80mm auto; margin: 0; }
   html, body { margin: 0; padding: 0; font-family: 'Courier New', monospace; color: #000; }
-  body { width: 72mm; padding: 3mm; font-size: 11pt; line-height: 1.35; font-weight: 600; }
+  body { width: 72mm; padding: 3mm; font-size: 13pt; line-height: 1.4; font-weight: 800; }
   .center { text-align: center; }
   .right { text-align: right; }
   .bold { font-weight: 900; }
-  .big { font-size: 14pt; }
-  .xl { font-size: 16pt; }
-  .muted { font-size: 9pt; color: #333; font-weight: 600; }
-  .sep { border-top: 1px dashed #000; margin: 6px 0; }
-  .sep-thick { border-top: 2px solid #000; margin: 7px 0; }
-  .row { display: flex; justify-content: space-between; gap: 4px; font-weight: 700; }
-  .item { margin-bottom: 4px; }
-  .item-nom { font-size: 11pt; font-weight: 700; }
-  .item-row { display: flex; justify-content: space-between; font-size: 11pt; font-weight: 600; }
+  .big { font-size: 16pt; }
+  .xl { font-size: 18pt; }
+  .muted { font-size: 11pt; color: #222; font-weight: 700; }
+  .sep { border-top: 2px dashed #000; margin: 6px 0; }
+  .sep-thick { border-top: 3px solid #000; margin: 7px 0; }
+  .row { display: flex; justify-content: space-between; gap: 4px; font-weight: 800; font-size: 13pt; }
+  .item { margin-bottom: 5px; }
+  .item-nom { font-size: 13pt; font-weight: 900; }
+  .item-row { display: flex; justify-content: space-between; font-size: 13pt; font-weight: 800; }
   .item-sub { font-weight: 900; }
-  .total-row { font-size: 16pt; font-weight: 900; color: #000; }
-  .reprint { border: 1px solid #000; padding: 2px 6px; display: inline-block; font-size: 9pt; margin-bottom: 3px; font-weight: 900; }
+  .total-row { font-size: 20pt; font-weight: 900; color: #000; }
+  .reprint { border: 2px solid #000; padding: 3px 8px; display: inline-block; font-size: 11pt; margin-bottom: 3px; font-weight: 900; }
   .logo { width: 55mm; max-width: 80%; height: auto; margin: 4px auto; display: block; }
-  .brand-name { font-size: 14pt; font-weight: 900; letter-spacing: 0.5px; margin: 3px 0; color: #000; }
-  .brand-sub { font-size: 10pt; color: #000; font-weight: 800; letter-spacing: 1px; margin-bottom: 3px; }
-  .footer-msg { font-size: 11pt; font-weight: 800; margin: 6px 0 3px; }
-  .footer-brand { font-size: 9pt; color: #000; font-weight: 800; letter-spacing: 0.5px; margin-top: 5px; }
+  .brand-name { font-size: 16pt; font-weight: 900; letter-spacing: 0.5px; margin: 3px 0; color: #000; }
+  .brand-sub { font-size: 12pt; color: #000; font-weight: 900; letter-spacing: 1px; margin-bottom: 3px; }
+  .footer-msg { font-size: 13pt; font-weight: 900; margin: 6px 0 3px; }
+  .footer-brand { font-size: 11pt; color: #000; font-weight: 900; letter-spacing: 0.5px; margin-top: 5px; }
 </style></head><body>
   ${t.es_presupuesto ? '<div class="center"><span class="reprint">*** PRESUPUESTO ***</span><br><span style="font-size: 7pt; font-weight: bold; padding-top: 2px; display: inline-block;">Esta cotización puede variar sin previo aviso.</span></div>' : (t.reimpresion ? '<div class="center"><span class="reprint">*** REIMPRESIÓN ***</span></div>' : '')}
   <div class="center">
@@ -176,33 +176,33 @@ async function renderTicketToBase64(html: string): Promise<string> {
   const styleEl = document.createElement('style');
   styleEl.textContent = `
     ${styles}
-    /* Overrides para render térmico — tamaños grandes para 576px canvas */
+    /* Overrides para render térmico — tamaños grandes y gruesos para 576px canvas */
     body, .ticket-render {
       width: 576px !important;
       padding: 20px !important;
       margin: 0 !important;
-      font-size: 20px !important;
+      font-size: 24px !important;
       line-height: 1.5 !important;
-      font-weight: 700 !important;
+      font-weight: 900 !important;
       color: #000 !important;
       background: #fff !important;
     }
     .logo { width: 440px !important; max-width: 82% !important; margin: 8px auto !important; }
-    .brand-name { font-size: 28px !important; font-weight: 900 !important; margin: 6px 0 !important; }
-    .brand-sub { font-size: 18px !important; font-weight: 800 !important; }
-    .total-row { font-size: 32px !important; font-weight: 900 !important; }
-    .muted { font-size: 16px !important; color: #333 !important; }
-    .item { margin-bottom: 6px !important; }
-    .item-nom { font-size: 20px !important; font-weight: 800 !important; }
-    .item-row { font-size: 20px !important; font-weight: 700 !important; }
+    .brand-name { font-size: 34px !important; font-weight: 900 !important; margin: 6px 0 !important; }
+    .brand-sub { font-size: 22px !important; font-weight: 900 !important; }
+    .total-row { font-size: 40px !important; font-weight: 900 !important; }
+    .muted { font-size: 20px !important; color: #222 !important; font-weight: 800 !important; }
+    .item { margin-bottom: 8px !important; }
+    .item-nom { font-size: 24px !important; font-weight: 900 !important; }
+    .item-row { font-size: 24px !important; font-weight: 800 !important; }
     .item-sub { font-weight: 900 !important; }
-    .row { font-size: 20px !important; font-weight: 700 !important; }
+    .row { font-size: 24px !important; font-weight: 800 !important; }
     .bold { font-weight: 900 !important; }
-    .sep { border-top: 2px dashed #000 !important; margin: 12px 0 !important; }
-    .sep-thick { border-top: 3px solid #000 !important; margin: 14px 0 !important; }
-    .footer-msg { font-size: 20px !important; font-weight: 800 !important; margin: 10px 0 !important; }
-    .footer-brand { font-size: 16px !important; font-weight: 800 !important; }
-    .reprint { font-size: 16px !important; font-weight: 900 !important; padding: 4px 10px !important; }
+    .sep { border-top: 3px dashed #000 !important; margin: 14px 0 !important; }
+    .sep-thick { border-top: 4px solid #000 !important; margin: 16px 0 !important; }
+    .footer-msg { font-size: 24px !important; font-weight: 900 !important; margin: 12px 0 !important; }
+    .footer-brand { font-size: 20px !important; font-weight: 900 !important; }
+    .reprint { font-size: 20px !important; font-weight: 900 !important; padding: 5px 12px !important; }
   `;
 
   // Crear el wrapper con clase para los estilos
@@ -248,7 +248,7 @@ async function renderTicketToBase64(html: string): Promise<string> {
 
 // ─── Impresión automática (al completar venta) ──────────────
 
-/** Impresión automática al completar venta — ESC/POS texto directo (instantáneo).
+/** Impresión automática al completar venta — renderiza HTML a imagen y envía directo.
  *  Devuelve `null` si se imprimió bien, o un string con el error para que la UI lo muestre. */
 export async function imprimirTicketAuto(negocio: ConfigNegocio, data: TicketData): Promise<string | null> {
   const impresora = (negocio.impresora_termica || '').trim();
@@ -256,32 +256,21 @@ export async function imprimirTicketAuto(negocio: ConfigNegocio, data: TicketDat
     return 'no_printer';
   }
   try {
-    // Enviar datos directo a Rust — genera ESC/POS texto en <1ms y lo manda al spooler
-    await invoke('imprimir_ticket_termico', {
-      datos: {
-        negocio_nombre: negocio.nombre,
-        negocio_direccion: negocio.direccion,
-        negocio_telefono: negocio.telefono,
-        negocio_rfc: negocio.rfc,
-        mensaje_pie: negocio.mensaje_pie,
-        folio: data.folio,
-        fecha: data.fecha,
-        usuario: data.usuario.split(' ')[0],
-        cliente: data.cliente ?? null,
-        items: data.items.map(i => ({
-          cantidad: i.cantidad,
-          nombre: i.nombre,
-          precio_unitario: i.precio_final,
-          subtotal: i.subtotal,
-        })),
-        subtotal: data.subtotal,
-        descuento: data.descuento,
-        redondeo: data.redondeo ?? 0,
-        total: data.total,
-        metodo_pago: data.metodo_pago,
-      },
+    // 1) Obtener logo
+    const logo = await getLogoDataUrl();
+
+    // 2) Generar HTML del ticket
+    const html = buildTicketHTML(negocio, data, logo);
+
+    // 3) Renderizar a imagen PNG via html2canvas
+    const imagenBase64 = await renderTicketToBase64(html);
+
+    // 4) Enviar imagen a Rust para impresión ESC/POS raster
+    await invoke('imprimir_ticket_imagen', {
+      imagenBase64,
       impresora,
     });
+
     return null; // éxito
   } catch (e: any) {
     const msg = typeof e === 'string' ? e : e?.message || 'Error desconocido';
