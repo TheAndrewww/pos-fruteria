@@ -281,20 +281,31 @@ export default function Dashboard() {
           {/* Alertas */}
           {cortePendiente && (
             <div style={{
-              padding: '10px 20px', background: 'var(--color-warning-soft)',
-              borderBottom: '2px solid var(--color-warning)',
-              display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
+              margin: '8px 12px 0', padding: '10px 16px',
+              background: 'var(--color-warning-soft)', border: '1px solid rgba(217, 163, 40, 0.3)',
+              borderRadius: 12,
+              display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0,
             }}>
-              <span style={{ fontSize: 18 }}>⚠️</span>
-              <span style={{ fontSize: 14, fontWeight: 700, flex: 1, color: '#8b6508' }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: 8, background: 'var(--color-warning)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <span style={{ fontSize: 16, lineHeight: 1 }}>⚠️</span>
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 700, flex: 1, color: '#8b6508' }}>
                 Cierre de caja pendiente del {cortePendiente}
               </span>
               <button className="btn btn-sm"
-                style={{ background: 'var(--color-warning)', color: '#fff', border: 'none' }}
+                style={{ background: 'var(--color-warning)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, padding: '6px 14px', minHeight: 32 }}
                 onClick={() => { setModulo('cortes'); setTriggerDia(n => n + 1); }}>
                 Hacer corte
               </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => setCortePendiente(null)}>
+              <button
+                onClick={() => setCortePendiente(null)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+                  color: '#8b6508', fontSize: 16, lineHeight: 1, opacity: 0.6,
+                }}>
                 ✕
               </button>
             </div>
@@ -302,20 +313,31 @@ export default function Dashboard() {
 
           {stockBajoCount > 0 && !stockAlertDismiss && tienePermiso('inventario', 'ver') && (
             <div style={{
-              padding: '10px 20px', background: 'var(--color-danger-soft)',
-              borderBottom: '2px solid var(--color-danger)',
-              display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
+              margin: '8px 12px 0', padding: '10px 16px',
+              background: 'var(--color-danger-soft)', border: '1px solid rgba(233, 78, 27, 0.2)',
+              borderRadius: 12,
+              display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0,
             }}>
-              <span style={{ fontSize: 18 }}>📉</span>
-              <span style={{ fontSize: 14, fontWeight: 700, flex: 1, color: 'var(--color-danger)' }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: 8, background: 'var(--color-danger)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <span style={{ fontSize: 16, lineHeight: 1, filter: 'grayscale(1) brightness(10)' }}>📉</span>
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 700, flex: 1, color: 'var(--color-danger)' }}>
                 {stockBajoCount} producto{stockBajoCount !== 1 ? 's' : ''} con stock bajo
               </span>
               <button className="btn btn-sm"
-                style={{ background: 'var(--color-danger)', color: '#fff', border: 'none' }}
+                style={{ background: 'var(--color-danger)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, padding: '6px 14px', minHeight: 32 }}
                 onClick={() => setModulo('catalogo')}>
                 Ver inventario
               </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => setStockAlertDismiss(true)}>
+              <button
+                onClick={() => setStockAlertDismiss(true)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+                  color: 'var(--color-danger)', fontSize: 16, lineHeight: 1, opacity: 0.6,
+                }}>
                 ✕
               </button>
             </div>

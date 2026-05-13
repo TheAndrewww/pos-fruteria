@@ -235,29 +235,65 @@ input, textarea, select {
 .mono { font-family: 'JetBrains Mono', 'Consolas', monospace; }
 
 /* ============================================================
-   PIN PAD
+   PIN PAD — Circular Moderno
    ============================================================ */
 .pin-key {
-  width: 80px;
-  height: 80px;
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  border: 1.5px solid var(--color-border);
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--color-surface-2);
+  border: none;
   color: var(--color-text);
-  font-size: 28px;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 30px;
   font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.08s ease;
+  transition: all 0.12s ease;
   -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 1px 3px rgba(43, 41, 38, 0.08);
+}
+.pin-key:hover {
+  background: var(--color-border);
 }
 .pin-key:active {
-  transform: scale(0.90);
+  transform: scale(0.88);
   background: var(--color-primary-soft);
-  border-color: var(--color-primary);
   color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+.pin-key:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+.pin-key-clear {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+.pin-key-clear:hover { background: rgba(217, 163, 40, 0.22); }
+.pin-key-clear:active {
+  background: rgba(217, 163, 40, 0.3);
+  color: var(--color-warning);
+  box-shadow: none;
+}
+.pin-key-back {
+  background: var(--color-surface);
+  color: var(--color-text-dim);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 26px;
+}
+.pin-key-back:hover { background: var(--color-surface-2); }
+.pin-key-back:active {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  box-shadow: none;
 }
 
 /* ============================================================

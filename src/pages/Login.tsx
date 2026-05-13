@@ -1,25 +1,21 @@
-// pages/Login.tsx — Pantalla de login táctil (PIN pad grande)
+// pages/Login.tsx — Pantalla de login táctil (PIN circular moderno)
 
 import { useState, useEffect, useCallback } from 'react';
 import logoPaulin from '../assets/LOGO PAULIN.svg';
 import { useAuthStore } from '../store/authStore';
 
 export default function Login() {
-  const { loginPin, loginPassword, cargando, error, limpiarError } = useAuthStore();
+  const { loginPin, cargando, error, limpiarError } = useAuthStore();
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [credentials, setCredentials] = useState({ usuario: '', password: '' });
+  const [appVersion, setAppVersion] = useState('');
 
   useEffect(() => {
-    limpiarError();
-    setPin('');
-    setPinError(false);
-  }, [showPassword]);
+    import('@tauri-apps/api/app').then(m => m.getVersion()).then(setAppVersion).catch(() => {});
+  }, []);
 
   // Keyboard support
   useEffect(() => {
-    if (showPassword) return;
     const handleKey = (e: KeyboardEvent) => {
       if (e.key >= '0' && e.key <= '9') handlePinInput(e.key);
       else if (e.key === 'Backspace') { setPin(p => p.slice(0, -1)); setPinError(false); }
@@ -27,7 +23,7 @@ export default function Login() {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [showPassword, pin]);
+  }, [pin]);
 
   const handlePinInput = useCallback((digit: string) => {
     setPinError(false);
@@ -50,13 +46,6 @@ export default function Login() {
     }
   };
 
-  const handlePasswordLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await loginPassword(credentials.usuario, credentials.password);
-  };
-
-  const digits = ['1','2','3','4','5','6','7','8','9','C','0','⌫'];
-
   return (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -64,139 +53,94 @@ export default function Login() {
     }}>
       <div className="animate-fade-in" style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center',
-        gap: 32, width: 420,
+        gap: 40, width: 440,
       }}>
         {/* Logo */}
         <div style={{ textAlign: 'center' }}>
-          <img src={logoPaulin} alt="Paulín Premium Fruits" style={{ width: 320, height: 'auto', marginBottom: 8 }} />
-          <p style={{ color: 'var(--color-text-dim)', fontSize: 14, marginTop: 8 }}>
+          <img src={logoPaulin} alt="Paulín Premium Fruits" style={{ width: 300, height: 'auto' }} />
+          <p style={{
+            color: 'var(--color-text-dim)', fontSize: 13, marginTop: 10,
+            fontWeight: 500, letterSpacing: 2, textTransform: 'uppercase',
+          }}>
             Punto de Venta
           </p>
         </div>
 
-        {!showPassword ? (
-          /* PIN Mode */
-          <div className="card" style={{ width: '100%', padding: 32 }}>
-            <p style={{
-              textAlign: 'center', fontSize: 15, fontWeight: 600,
-              color: 'var(--color-text-muted)', marginBottom: 20,
-            }}>
-              Ingresa tu PIN
-            </p>
-
-            {/* PIN dots */}
+        {/* PIN section */}
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          gap: 28, width: '100%',
+        }}>
+          {/* PIN dots + label */}
+          <div style={{ textAlign: 'center' }}>
             <div className={pinError ? 'animate-pin-shake' : ''}
-              style={{ display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 24 }}>
+              style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 12 }}>
               {[0,1,2,3].map(i => (
                 <div key={i} style={{
-                  width: 22, height: 22, borderRadius: '50%',
-                  border: `2.5px solid ${pinError ? 'var(--color-danger)' : 'var(--color-border-2)'}`,
+                  width: 18, height: 18, borderRadius: '50%',
+                  border: `2.5px solid ${pinError ? 'var(--color-danger)' : pin.length > i ? 'var(--color-primary)' : 'var(--color-border-2)'}`,
                   background: i < pin.length
                     ? (pinError ? 'var(--color-danger)' : 'var(--color-primary)')
                     : 'transparent',
-                  transition: 'all 0.1s',
+                  transition: 'all 0.15s ease',
+                  transform: i < pin.length ? 'scale(1.1)' : 'scale(1)',
                 }} />
               ))}
             </div>
-
-            {/* Error */}
-            {(error || pinError) && (
-              <p style={{
-                color: 'var(--color-danger)', fontSize: 14,
-                textAlign: 'center', marginBottom: 12,
-              }}>
-                {error || 'PIN incorrecto'}
-              </p>
-            )}
-
-            {/* Pin pad */}
-            <div style={{
-              display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: 10, justifyItems: 'center',
+            <p style={{
+              fontSize: 14, fontWeight: 600,
+              color: pinError ? 'var(--color-danger)' : 'var(--color-text-dim)',
+              transition: 'color 0.15s',
+              minHeight: 21,
             }}>
-              {digits.map(d => (
-                <button
-                  key={d}
-                  className="pin-key"
-                  onClick={() => {
-                    if (d === '⌫') { setPin(p => p.slice(0, -1)); setPinError(false); }
-                    else if (d === 'C') { setPin(''); setPinError(false); }
-                    else if (pin.length < 4) handlePinInput(d);
-                  }}
-                  disabled={cargando}
-                  style={{
-                    color: d === 'C' ? 'var(--color-warning)' : d === '⌫' ? 'var(--color-text-dim)' : undefined,
-                  }}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
-
-            {cargando && (
-              <p className="animate-pulse-soft" style={{
-                color: 'var(--color-text-dim)', fontSize: 14,
-                textAlign: 'center', marginTop: 16,
-              }}>
-                Verificando...
-              </p>
-            )}
+              {cargando ? 'Verificando...' : (error || pinError) ? (error || 'PIN incorrecto') : 'Ingresa tu PIN'}
+            </p>
           </div>
-        ) : (
-          /* Password Mode */
-          <div className="card" style={{ width: '100%', padding: 32 }}>
-            <form onSubmit={handlePasswordLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: 6, display: 'block' }}>
-                  USUARIO
-                </label>
-                <input
-                  className="input input-lg"
-                  placeholder="nombre de usuario"
-                  value={credentials.usuario}
-                  onChange={e => setCredentials(c => ({ ...c, usuario: e.target.value }))}
-                  autoFocus
-                  autoComplete="username"
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: 6, display: 'block' }}>
-                  CONTRASEÑA
-                </label>
-                <input
-                  className="input input-lg"
-                  type="password"
-                  placeholder="••••••••"
-                  value={credentials.password}
-                  onChange={e => setCredentials(c => ({ ...c, password: e.target.value }))}
-                  autoComplete="current-password"
-                />
-              </div>
-              {error && (
-                <p style={{ color: 'var(--color-danger)', fontSize: 14, textAlign: 'center' }}>{error}</p>
-              )}
+
+          {/* Pin pad — circular */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(3, 88px)',
+            gap: 14, justifyContent: 'center',
+          }}>
+            {['1','2','3','4','5','6','7','8','9'].map(d => (
               <button
-                className="btn btn-primary btn-lg"
-                type="submit"
-                disabled={cargando || !credentials.usuario || !credentials.password}
-                style={{ width: '100%', justifyContent: 'center' }}
+                key={d}
+                className="pin-key"
+                onClick={() => pin.length < 4 && handlePinInput(d)}
+                disabled={cargando}
               >
-                {cargando ? 'Verificando...' : 'Entrar'}
+                {d}
               </button>
-            </form>
+            ))}
+            {/* Bottom row: Clear, 0, Backspace */}
+            <button
+              className="pin-key pin-key-clear"
+              onClick={() => { setPin(''); setPinError(false); }}
+              disabled={cargando}
+            >
+              C
+            </button>
+            <button
+              className="pin-key"
+              onClick={() => pin.length < 4 && handlePinInput('0')}
+              disabled={cargando}
+            >
+              0
+            </button>
+            <button
+              className="pin-key pin-key-back"
+              onClick={() => { setPin(p => p.slice(0, -1)); setPinError(false); }}
+              disabled={cargando}
+            >
+              ⌫
+            </button>
           </div>
-        )}
+        </div>
 
-        {/* Toggle */}
-        <button
-          className="btn btn-ghost btn-sm"
-          onClick={() => setShowPassword(!showPassword)}
-          style={{ fontSize: 13 }}
-        >
-          {showPassword ? '← Volver a PIN' : 'Entrar con usuario y contraseña'}
-        </button>
-
-        <p style={{ color: 'var(--color-text-dim)', fontSize: 12 }}>v0.2.0</p>
+        {/* Version */}
+        <p style={{ color: 'var(--color-text-dim)', fontSize: 12, fontWeight: 500 }}>
+          v{appVersion || '...'}
+        </p>
       </div>
     </div>
   );

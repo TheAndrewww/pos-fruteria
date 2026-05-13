@@ -308,20 +308,38 @@ export default function PuntoDeVenta() {
             ) : (
               items.map((item, i) => (
                 <div key={`${item.producto.id}-${i}`} style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '10px 14px', borderBottom: '1px solid var(--color-border)',
+                  padding: '12px 14px', borderBottom: '1px solid var(--color-border)',
+                  display: 'flex', flexDirection: 'column', gap: 6,
                 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700 }}>
-                      {(item.producto as any).emoji || '🍎'} {item.producto.nombre}
-                    </div>
-                    <div className="mono" style={{ fontSize: 11, color: 'var(--color-text-dim)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {/* Row 1: Name + Subtotal + Delete */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>
+                      {(item.producto as any).emoji || '🍎'}
+                    </span>
+                    <span style={{ fontSize: 14, fontWeight: 700, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.producto.nombre}
+                    </span>
+                    <span className="mono" style={{ fontWeight: 800, fontSize: 16, flexShrink: 0, color: 'var(--color-text)' }}>
+                      {fmt(item.subtotal)}
+                    </span>
+                    <button style={{
+                      border: 'none', background: 'var(--color-danger-soft)', cursor: 'pointer',
+                      padding: 6, color: 'var(--color-danger)', borderRadius: 8, flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }} onClick={() => quitarProducto(i)}>
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                  {/* Row 2: Price info + Quantity controls */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 30 }}>
+                    {/* Price info */}
+                    <div className="mono" style={{ fontSize: 12, color: 'var(--color-text-dim)', display: 'flex', alignItems: 'center', gap: 3 }}>
                       <button
                         onClick={(e) => { e.stopPropagation(); setPrecioModal({ index: i, item }); }}
                         style={{
                           background: 'none', border: 'none', cursor: 'pointer',
                           color: item.precioFinal !== item.producto.precio_venta ? 'var(--color-warning)' : 'var(--color-primary)',
-                          fontWeight: 700, fontSize: 11, padding: '1px 4px', borderRadius: 4,
+                          fontWeight: 700, fontSize: 12, padding: '1px 4px', borderRadius: 4,
                           textDecoration: 'underline', textDecorationStyle: 'dotted',
                           fontFamily: 'inherit',
                         }}
@@ -329,45 +347,38 @@ export default function PuntoDeVenta() {
                       >
                         {fmt(item.precioFinal)}
                       </button>
-                      × {item.cantidad} {(item.producto as any).unidad || 'kg'}
+                      <span>× {item.cantidad}</span>
+                      <span style={{ fontSize: 10, color: 'var(--color-text-dim)' }}>{(item.producto as any).unidad || 'kg'}</span>
+                    </div>
+                    {/* Quantity controls */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <button className="btn btn-ghost" style={{ padding: 4, minHeight: 32, minWidth: 32, borderRadius: 8 }}
+                        onClick={() => cambiarCantidad(i, item.cantidad - 1)}>
+                        <Minus size={14} />
+                      </button>
+                      <span className="mono" style={{ fontWeight: 800, minWidth: 28, textAlign: 'center', fontSize: 14 }}>
+                        {item.cantidad}
+                      </span>
+                      <button className="btn btn-ghost" style={{ padding: 4, minHeight: 32, minWidth: 32, borderRadius: 8 }}
+                        onClick={() => cambiarCantidad(i, item.cantidad + 1)}>
+                        <Plus size={14} />
+                      </button>
+                      {((item.producto as any).unidad || 'kg') === 'kg' && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setTaraModal({ index: i, item }); }}
+                          style={{
+                            background: 'var(--color-surface-2)', border: '1px solid var(--color-border)',
+                            cursor: 'pointer', color: 'var(--color-text-muted)',
+                            fontWeight: 700, fontSize: 10, padding: '3px 8px', borderRadius: 6,
+                            fontFamily: 'inherit', marginLeft: 4,
+                          }}
+                          title="Descontar tara"
+                        >
+                          TARA
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <button className="btn btn-ghost" style={{ padding: 4, minHeight: 36, minWidth: 36 }}
-                      onClick={() => cambiarCantidad(i, item.cantidad - 1)}>
-                      <Minus size={16} />
-                    </button>
-                    <span className="mono" style={{ fontWeight: 800, minWidth: 30, textAlign: 'center', fontSize: 15 }}>
-                      {item.cantidad}
-                    </span>
-                    <button className="btn btn-ghost" style={{ padding: 4, minHeight: 36, minWidth: 36 }}
-                      onClick={() => cambiarCantidad(i, item.cantidad + 1)}>
-                      <Plus size={16} />
-                    </button>
-                    {((item.producto as any).unidad || 'kg') === 'kg' && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setTaraModal({ index: i, item }); }}
-                        style={{
-                          background: 'var(--color-surface-2)', border: '1px solid var(--color-border)',
-                          cursor: 'pointer', color: 'var(--color-text-muted)',
-                          fontWeight: 700, fontSize: 9, padding: '2px 6px', borderRadius: 6,
-                          fontFamily: 'inherit', marginLeft: 2,
-                        }}
-                        title="Descontar tara"
-                      >
-                        TARA
-                      </button>
-                    )}
-                  </div>
-                  <div className="mono" style={{ fontWeight: 800, fontSize: 15, minWidth: 65, textAlign: 'right' }}>
-                    {fmt(item.subtotal)}
-                  </div>
-                  <button style={{
-                    border: 'none', background: 'transparent', cursor: 'pointer',
-                    padding: 6, color: 'var(--color-danger)',
-                  }} onClick={() => quitarProducto(i)}>
-                    <Trash2 size={16} />
-                  </button>
                 </div>
               ))
             )}
