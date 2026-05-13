@@ -381,10 +381,41 @@ pub fn imprimir_ticket_imagen(
         image::imageops::FilterType::Lanczos3,
     );
 
-    // 4) Convertir a bitmap 1-bit monochrome con threshold
-    //    y generar bytes ESC/POS raster (GS v 0)
-    let width_bytes = (target_width + 7) / 8; // bytes por línea (72 para 576px)
+    // 4) Floyd-Steinberg dithering para simular escala de grises
+    //    Esto convierte grises a patrones de puntos que la impresora
+    //    térmica reproduce como tonos intermedios.
+    let width_bytes = (target_width + 7) / 8;
     let height = resized.height();
+    let w = target_width as usize;
+    let h = height as usize;
+
+    // Copiar pixels a buffer f32 para acumular error de difusión
+    let mut pixels: Vec<f32> = resized.pixels().map(|p| p.0[0] as f32).collect();
+
+    // Floyd-Steinberg: distribuir error de cuantización a vecinos
+    for y in 0..h {
+        for x in 0..w {
+            let idx = y * w + x;
+            let old_val = pixels[idx].clamp(0.0, 255.0);
+            let new_val: f32 = if old_val < 128.0 { 0.0 } else { 255.0 };
+            let error = old_val - new_val;
+            pixels[idx] = new_val;
+
+            // Distribuir error: →7/16, ↙3/16, ↓5/16, ↘1/16
+            if x + 1 < w {
+                pixels[idx + 1] += error * 7.0 / 16.0;
+            }
+            if y + 1 < h {
+                if x > 0 {
+                    pixels[(y + 1) * w + (x - 1)] += error * 3.0 / 16.0;
+                }
+                pixels[(y + 1) * w + x] += error * 5.0 / 16.0;
+                if x + 1 < w {
+                    pixels[(y + 1) * w + (x + 1)] += error * 1.0 / 16.0;
+                }
+            }
+        }
+    }
 
     let mut esc_bytes: Vec<u8> = Vec::with_capacity((width_bytes * height + 256) as usize);
 
@@ -392,24 +423,20 @@ pub fn imprimir_ticket_imagen(
     esc_bytes.extend_from_slice(&[ESC, b'@']);
 
     // GS v 0 — raster bit image
-    // m=0 (normal), xL xH = width_bytes, yL yH = height
-    esc_bytes.extend_from_slice(&[GS, b'v', b'0', 0]); // GS v 0 m=0
-    esc_bytes.push((width_bytes & 0xFF) as u8);          // xL
-    esc_bytes.push(((width_bytes >> 8) & 0xFF) as u8);   // xH
-    esc_bytes.push((height & 0xFF) as u8);               // yL
-    esc_bytes.push(((height >> 8) & 0xFF) as u8);        // yH
+    esc_bytes.extend_from_slice(&[GS, b'v', b'0', 0]);
+    esc_bytes.push((width_bytes & 0xFF) as u8);
+    esc_bytes.push(((width_bytes >> 8) & 0xFF) as u8);
+    esc_bytes.push((height & 0xFF) as u8);
+    esc_bytes.push(((height >> 8) & 0xFF) as u8);
 
-    // Datos del bitmap: cada bit = 1 pixel, 1 = negro, 0 = blanco
-    // Threshold: pixel < 128 → negro (bit=1)
-    for y in 0..height {
-        for x_byte in 0..width_bytes {
+    // Datos: pixel dithered < 128 → negro (bit=1)
+    for y in 0..h {
+        for x_byte in 0..(width_bytes as usize) {
             let mut byte: u8 = 0;
-            for bit in 0..8u32 {
+            for bit in 0..8usize {
                 let x = x_byte * 8 + bit;
-                if x < target_width {
-                    let pixel = resized.get_pixel(x, y).0[0];
-                    // Invertir: en ESC/POS 1=negro, pero en la imagen 0=negro
-                    if pixel < 128 {
+                if x < w {
+                    if pixels[y * w + x] < 128.0 {
                         byte |= 0x80 >> bit;
                     }
                 }

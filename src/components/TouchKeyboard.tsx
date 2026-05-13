@@ -108,6 +108,64 @@ export function TouchKeyboardProvider({ children }: { children: ReactNode }) {
   const activeInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const keyboardRef = useRef<HTMLDivElement>(null);
   const isClosingRef = useRef(false);
+  // Track the scrollable parent we modified so we can restore it
+  const adjustedParentRef = useRef<{ el: HTMLElement; origMaxHeight: string; origPaddingBottom: string } | null>(null);
+
+  /** Find nearest scrollable ancestor */
+  const findScrollParent = (el: HTMLElement): HTMLElement | null => {
+    let node: HTMLElement | null = el.parentElement;
+    while (node) {
+      const style = getComputedStyle(node);
+      const ov = style.overflowY;
+      if (ov === 'auto' || ov === 'scroll') return node;
+      node = node.parentElement;
+    }
+    return null;
+  };
+
+  /** Adjust a scrollable parent so content below the keyboard is reachable */
+  const adjustParentForKeyboard = (input: HTMLElement) => {
+    const scrollParent = findScrollParent(input);
+    if (!scrollParent) return;
+
+    // Save original styles
+    adjustedParentRef.current = {
+      el: scrollParent,
+      origMaxHeight: scrollParent.style.maxHeight,
+      origPaddingBottom: scrollParent.style.paddingBottom,
+    };
+
+    // Shrink max-height to leave room for keyboard (~300px)
+    const kbHeight = 310;
+    const parentRect = scrollParent.getBoundingClientRect();
+    const availableHeight = window.innerHeight - parentRect.top - kbHeight;
+    if (availableHeight > 100) { // sanity check
+      scrollParent.style.maxHeight = `${availableHeight}px`;
+    }
+
+    // Add bottom padding so content can scroll past the keyboard
+    scrollParent.style.paddingBottom = '280px';
+
+    // Scroll the input into view within the parent
+    setTimeout(() => {
+      const inputRect = input.getBoundingClientRect();
+      const visibleBottom = window.innerHeight - kbHeight;
+      if (inputRect.bottom > visibleBottom) {
+        const scrollBy = inputRect.bottom - visibleBottom + 40;
+        scrollParent.scrollBy({ top: scrollBy, behavior: 'smooth' });
+      }
+    }, 100);
+  };
+
+  /** Restore the parent to its original styles */
+  const restoreParent = () => {
+    const saved = adjustedParentRef.current;
+    if (saved) {
+      saved.el.style.maxHeight = saved.origMaxHeight;
+      saved.el.style.paddingBottom = saved.origPaddingBottom;
+      adjustedParentRef.current = null;
+    }
+  };
 
   // Listen for focus events globally
   useEffect(() => {
@@ -123,10 +181,8 @@ export function TouchKeyboardProvider({ children }: { children: ReactNode }) {
         setShifted(false);
         setVisible(true);
 
-        // Scroll input into view after keyboard appears
-        setTimeout(() => {
-          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 200);
+        // Adjust the scrollable parent after keyboard animation starts
+        setTimeout(() => adjustParentForKeyboard(target), 280);
       }
     };
 
@@ -162,6 +218,7 @@ export function TouchKeyboardProvider({ children }: { children: ReactNode }) {
   const closeKeyboard = useCallback(() => {
     isClosingRef.current = true;
     setVisible(false);
+    restoreParent();
     if (activeInputRef.current) {
       activeInputRef.current.blur();
     }
@@ -267,67 +324,57 @@ export function TouchKeyboardProvider({ children }: { children: ReactNode }) {
 
   return (
     <VKBContext.Provider value={{ isVisible: visible }}>
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
-        {/* Main content — shrinks when keyboard is visible */}
-        <div style={{
-          flex: 1,
-          minHeight: 0,
-          overflow: 'hidden',
-          transition: 'flex 0.25s ease',
-        }}>
-          {children}
-        </div>
+      {children}
 
-        {/* Virtual Keyboard */}
-        <div
-          ref={keyboardRef}
-          className={`vkb-container ${visible ? 'vkb-visible' : ''}`}
-          onPointerDown={(e) => {
-            // Prevent keyboard clicks from stealing focus from input
-            e.preventDefault();
-          }}
-        >
-          {visible && (
-            <div className={`vkb-keyboard ${layoutMode === 'numeric' ? 'vkb-numeric' : 'vkb-full'}`}>
-              {/* Drag handle / indicator */}
-              <div className="vkb-handle">
-                <div className="vkb-handle-bar" />
-              </div>
-
-              {rows.map((row, ri) => (
-                <div key={ri} className="vkb-row">
-                  {row.map((key) => {
-                    let className = 'vkb-key';
-
-                    if (key === 'espacio') {
-                      className += ' vkb-key-space';
-                    } else if (key === '⌫') {
-                      className += ' vkb-key-action vkb-key-backspace';
-                    } else if (key === '⇧') {
-                      className += ' vkb-key-action';
-                      if (shifted) className += ' vkb-key-active';
-                    } else if (key === 'Cerrar') {
-                      className += ' vkb-key-close';
-                    } else if (key === '123' || key === 'ABC') {
-                      className += ' vkb-key-mode';
-                    }
-
-                    return (
-                      <button
-                        key={`${ri}-${key}`}
-                        className={className}
-                        onClick={() => handleKey(key)}
-                        type="button"
-                      >
-                        {key === 'espacio' ? '␣' : key}
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
+      {/* Virtual Keyboard — fixed overlay on top of everything */}
+      <div
+        ref={keyboardRef}
+        className={`vkb-container ${visible ? 'vkb-visible' : ''}`}
+        onPointerDown={(e) => {
+          // Prevent keyboard clicks from stealing focus from input
+          e.preventDefault();
+        }}
+      >
+        {visible && (
+          <div className={`vkb-keyboard ${layoutMode === 'numeric' ? 'vkb-numeric' : 'vkb-full'}`}>
+            {/* Drag handle / indicator */}
+            <div className="vkb-handle">
+              <div className="vkb-handle-bar" />
             </div>
-          )}
-        </div>
+
+            {rows.map((row, ri) => (
+              <div key={ri} className="vkb-row">
+                {row.map((key) => {
+                  let className = 'vkb-key';
+
+                  if (key === 'espacio') {
+                    className += ' vkb-key-space';
+                  } else if (key === '⌫') {
+                    className += ' vkb-key-action vkb-key-backspace';
+                  } else if (key === '⇧') {
+                    className += ' vkb-key-action';
+                    if (shifted) className += ' vkb-key-active';
+                  } else if (key === 'Cerrar') {
+                    className += ' vkb-key-close';
+                  } else if (key === '123' || key === 'ABC') {
+                    className += ' vkb-key-mode';
+                  }
+
+                  return (
+                    <button
+                      key={`${ri}-${key}`}
+                      className={className}
+                      onClick={() => handleKey(key)}
+                      type="button"
+                    >
+                      {key === 'espacio' ? '␣' : key}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </VKBContext.Provider>
   );

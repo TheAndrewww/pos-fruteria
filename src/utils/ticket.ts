@@ -176,30 +176,33 @@ async function renderTicketToBase64(html: string): Promise<string> {
   const styleEl = document.createElement('style');
   styleEl.textContent = `
     ${styles}
-    /* Overrides para el render a 576px */
+    /* Overrides para render térmico — tamaños grandes para 576px canvas */
     body, .ticket-render {
       width: 576px !important;
-      padding: 16px !important;
+      padding: 20px !important;
       margin: 0 !important;
-      font-size: 14pt !important;
-      line-height: 1.4 !important;
-      font-weight: 600 !important;
+      font-size: 20px !important;
+      line-height: 1.5 !important;
+      font-weight: 700 !important;
       color: #000 !important;
       background: #fff !important;
     }
-    .logo { width: 400px !important; max-width: 80% !important; }
-    .brand-name { font-size: 18pt !important; }
-    .brand-sub { font-size: 13pt !important; }
-    .total-row { font-size: 20pt !important; }
-    .muted { font-size: 12pt !important; }
-    .item-nom { font-size: 14pt !important; }
-    .item-row { font-size: 14pt !important; }
-    .row { font-size: 14pt !important; }
-    .sep { border-top: 2px dashed #000 !important; margin: 10px 0 !important; }
-    .sep-thick { border-top: 3px solid #000 !important; margin: 12px 0 !important; }
-    .footer-msg { font-size: 14pt !important; }
-    .footer-brand { font-size: 12pt !important; }
-    .reprint { font-size: 12pt !important; }
+    .logo { width: 440px !important; max-width: 82% !important; margin: 8px auto !important; }
+    .brand-name { font-size: 28px !important; font-weight: 900 !important; margin: 6px 0 !important; }
+    .brand-sub { font-size: 18px !important; font-weight: 800 !important; }
+    .total-row { font-size: 32px !important; font-weight: 900 !important; }
+    .muted { font-size: 16px !important; color: #333 !important; }
+    .item { margin-bottom: 6px !important; }
+    .item-nom { font-size: 20px !important; font-weight: 800 !important; }
+    .item-row { font-size: 20px !important; font-weight: 700 !important; }
+    .item-sub { font-weight: 900 !important; }
+    .row { font-size: 20px !important; font-weight: 700 !important; }
+    .bold { font-weight: 900 !important; }
+    .sep { border-top: 2px dashed #000 !important; margin: 12px 0 !important; }
+    .sep-thick { border-top: 3px solid #000 !important; margin: 14px 0 !important; }
+    .footer-msg { font-size: 20px !important; font-weight: 800 !important; margin: 10px 0 !important; }
+    .footer-brand { font-size: 16px !important; font-weight: 800 !important; }
+    .reprint { font-size: 16px !important; font-weight: 900 !important; padding: 4px 10px !important; }
   `;
 
   // Crear el wrapper con clase para los estilos

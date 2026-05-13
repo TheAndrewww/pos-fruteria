@@ -429,7 +429,7 @@ input, textarea, select {
 .pos-dashboard {
   display: grid;
   grid-template-columns: 220px 1fr;
-  height: 100%;
+  height: 100vh;
   min-height: 0;
   overflow: hidden;
   background: var(--color-bg);
@@ -532,15 +532,19 @@ input, textarea, select {
    VIRTUAL KEYBOARD (VKB) — Touch-first on-screen keyboard
    ============================================================ */
 .vkb-container {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
   background: var(--color-surface);
   border-top: 1.5px solid var(--color-border);
-  flex-shrink: 0;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+  transform: translateY(100%);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .vkb-container.vkb-visible {
-  max-height: 340px;
+  transform: translateY(0);
 }
 
 .vkb-keyboard {
