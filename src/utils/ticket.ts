@@ -176,33 +176,33 @@ async function renderTicketToBase64(html: string): Promise<string> {
   const styleEl = document.createElement('style');
   styleEl.textContent = `
     ${styles}
-    /* Overrides para render térmico — tamaños 3x para 576px canvas */
+    /* Overrides para render térmico — máximo tamaño que cabe en 576px */
     body, .ticket-render {
       width: 576px !important;
-      padding: 20px !important;
+      padding: 16px !important;
       margin: 0 !important;
-      font-size: 60px !important;
+      font-size: 32px !important;
       line-height: 1.45 !important;
       font-weight: 900 !important;
       color: #000 !important;
       background: #fff !important;
     }
-    .logo { width: 440px !important; max-width: 82% !important; margin: 12px auto !important; }
-    .brand-name { font-size: 84px !important; font-weight: 900 !important; margin: 10px 0 !important; }
-    .brand-sub { font-size: 54px !important; font-weight: 900 !important; }
-    .total-row { font-size: 96px !important; font-weight: 900 !important; }
-    .muted { font-size: 48px !important; color: #222 !important; font-weight: 900 !important; }
-    .item { margin-bottom: 16px !important; }
-    .item-nom { font-size: 60px !important; font-weight: 900 !important; }
-    .item-row { font-size: 60px !important; font-weight: 900 !important; }
+    .logo { width: 440px !important; max-width: 82% !important; margin: 10px auto !important; }
+    .brand-name { font-size: 44px !important; font-weight: 900 !important; margin: 8px 0 !important; }
+    .brand-sub { font-size: 28px !important; font-weight: 900 !important; }
+    .total-row { font-size: 52px !important; font-weight: 900 !important; }
+    .muted { font-size: 26px !important; color: #222 !important; font-weight: 900 !important; }
+    .item { margin-bottom: 10px !important; }
+    .item-nom { font-size: 32px !important; font-weight: 900 !important; }
+    .item-row { font-size: 32px !important; font-weight: 900 !important; }
     .item-sub { font-weight: 900 !important; }
-    .row { font-size: 60px !important; font-weight: 900 !important; }
+    .row { font-size: 32px !important; font-weight: 900 !important; }
     .bold { font-weight: 900 !important; }
-    .sep { border-top: 6px dashed #000 !important; margin: 24px 0 !important; }
-    .sep-thick { border-top: 8px solid #000 !important; margin: 28px 0 !important; }
-    .footer-msg { font-size: 60px !important; font-weight: 900 !important; margin: 20px 0 !important; }
-    .footer-brand { font-size: 48px !important; font-weight: 900 !important; }
-    .reprint { font-size: 48px !important; font-weight: 900 !important; padding: 10px 20px !important; }
+    .sep { border-top: 4px dashed #000 !important; margin: 16px 0 !important; }
+    .sep-thick { border-top: 5px solid #000 !important; margin: 18px 0 !important; }
+    .footer-msg { font-size: 32px !important; font-weight: 900 !important; margin: 14px 0 !important; }
+    .footer-brand { font-size: 26px !important; font-weight: 900 !important; }
+    .reprint { font-size: 26px !important; font-weight: 900 !important; padding: 6px 14px !important; }
   `;
 
   // Crear el wrapper con clase para los estilos
