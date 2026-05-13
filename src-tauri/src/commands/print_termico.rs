@@ -72,6 +72,12 @@ fn negrita_off(b: &mut Vec<u8>) {
 fn doble_tamano(b: &mut Vec<u8>) {
     b.extend_from_slice(&[GS, b'!', 0x11]); // doble ancho + alto
 }
+fn doble_alto(b: &mut Vec<u8>) {
+    b.extend_from_slice(&[GS, b'!', 0x01]); // doble alto, ancho normal
+}
+fn doble_ancho(b: &mut Vec<u8>) {
+    b.extend_from_slice(&[GS, b'!', 0x10]); // doble ancho, alto normal
+}
 fn tamano_normal(b: &mut Vec<u8>) {
     b.extend_from_slice(&[GS, b'!', 0x00]);
 }
@@ -104,19 +110,22 @@ fn truncar(s: &str, max: usize) -> String {
 // ─── Generación del ticket ───────────────────────────────────
 
 pub fn generar_ticket_venta(datos: &DatosTicketTermico) -> Vec<u8> {
-    let ancho: usize = 48; // 80mm
-    let mut b: Vec<u8> = Vec::with_capacity(2048);
+    // 80mm = 48 chars normal, 24 chars doble ancho
+    let ancho: usize = 48;
+    let ancho_doble: usize = 24;
+    let mut b: Vec<u8> = Vec::with_capacity(4096);
 
     init(&mut b);
+    negrita_on(&mut b); // ← TODO el ticket en negrita
 
     // ─── Encabezado ────────────────────────────
     centrado(&mut b);
-    negrita_on(&mut b);
     doble_tamano(&mut b);
     let _ = writeln!(b, "{}", datos.negocio_nombre);
     tamano_normal(&mut b);
-    negrita_off(&mut b);
 
+    // Dirección, teléfono, RFC en doble alto
+    doble_alto(&mut b);
     if !datos.negocio_direccion.is_empty() {
         let _ = writeln!(b, "{}", datos.negocio_direccion);
     }
@@ -126,37 +135,40 @@ pub fn generar_ticket_venta(datos: &DatosTicketTermico) -> Vec<u8> {
     if !datos.negocio_rfc.is_empty() {
         let _ = writeln!(b, "RFC: {}", datos.negocio_rfc);
     }
+    tamano_normal(&mut b);
 
     izquierda(&mut b);
     linea_divisoria(&mut b, ancho);
 
-    // ─── Info de venta ────────────────────────
-    negrita_on(&mut b);
+    // ─── Info de venta (doble alto) ──────────
+    doble_alto(&mut b);
     let _ = writeln!(b, "Folio: {}", datos.folio);
     let _ = writeln!(b, "Fecha: {}", datos.fecha);
     let _ = writeln!(b, "Cajero: {}", datos.usuario);
     if let Some(cli) = &datos.cliente {
         let _ = writeln!(b, "Cliente: {}", cli);
     }
+    tamano_normal(&mut b);
     linea_divisoria(&mut b, ancho);
 
-    // ─── Items ─────────────────────────────────
-    // Formato: "NN x Nombre     $$.$$"
+    // ─── Items (doble alto) ───────────────────
     for item in &datos.items {
-        let prefijo = format!("{} x ", item.cantidad);
-        let precio_str = format!("${:.2}", item.subtotal);
-        let max_nombre = ancho.saturating_sub(prefijo.len() + precio_str.len() + 1);
-        let nombre = truncar(&item.nombre, max_nombre);
-        let padding = ancho.saturating_sub(prefijo.len() + nombre.chars().count() + precio_str.len());
-        let _ = writeln!(b, "{}{}{}{}", prefijo, nombre, " ".repeat(padding), precio_str);
-        if item.cantidad > 1.0 {
-            let unit = format!("  @ ${:.2} c/u", item.precio_unitario);
-            let _ = writeln!(b, "{}", unit);
-        }
+        // Nombre del producto en doble alto
+        doble_alto(&mut b);
+        let nombre = truncar(&item.nombre, ancho - 2);
+        let _ = writeln!(b, "{}", nombre);
+
+        // Cantidad x precio → subtotal (doble alto)
+        let detalle = format!("  {} x ${:.2}", item.cantidad, item.precio_unitario);
+        let sub_str = format!("${:.2}", item.subtotal);
+        let padding = ancho.saturating_sub(detalle.len() + sub_str.len());
+        let _ = writeln!(b, "{}{}{}", detalle, " ".repeat(padding), sub_str);
+        tamano_normal(&mut b);
     }
     linea_divisoria(&mut b, ancho);
 
     // ─── Totales ──────────────────────────────
+    doble_alto(&mut b);
     linea_kv(&mut b, "Subtotal:", &format!("${:.2}", datos.subtotal), ancho);
     if datos.descuento > 0.0 {
         linea_kv(&mut b, "Descuento:", &format!("-${:.2}", datos.descuento), ancho);
@@ -164,23 +176,32 @@ pub fn generar_ticket_venta(datos: &DatosTicketTermico) -> Vec<u8> {
     if datos.redondeo > 0.0 {
         linea_kv(&mut b, "Redondeo:", &format!("+${:.2}", datos.redondeo), ancho);
     }
-    doble_tamano(&mut b);
-    linea_kv(&mut b, "TOTAL:", &format!("${:.2}", datos.total), ancho / 2);
     tamano_normal(&mut b);
-    negrita_on(&mut b);
+
+    // TOTAL en doble tamaño (ancho + alto)
+    doble_tamano(&mut b);
+    linea_kv(&mut b, "TOTAL:", &format!("${:.2}", datos.total), ancho_doble);
+    tamano_normal(&mut b);
+
+    // Método de pago en doble alto
+    doble_alto(&mut b);
     linea_kv(&mut b, "Pago:", &datos.metodo_pago, ancho);
+    tamano_normal(&mut b);
 
     linea_divisoria(&mut b, ancho);
 
-    // ─── Pie ──────────────────────────────────
+    // ─── Pie (doble alto) ─────────────────────
     centrado(&mut b);
+    doble_alto(&mut b);
     if !datos.mensaje_pie.is_empty() {
         let _ = writeln!(b, "{}", datos.mensaje_pie);
     }
+    tamano_normal(&mut b);
     let _ = writeln!(b, "");
     let _ = writeln!(b, "");
     let _ = writeln!(b, "");
 
+    negrita_off(&mut b);
     cortar_papel(&mut b);
     b
 }

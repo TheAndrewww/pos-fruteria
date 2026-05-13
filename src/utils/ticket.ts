@@ -248,7 +248,7 @@ async function renderTicketToBase64(html: string): Promise<string> {
 
 // ─── Impresión automática (al completar venta) ──────────────
 
-/** Impresión automática al completar venta — renderiza HTML a imagen y envía directo.
+/** Impresión automática al completar venta — ESC/POS texto directo (instantáneo).
  *  Devuelve `null` si se imprimió bien, o un string con el error para que la UI lo muestre. */
 export async function imprimirTicketAuto(negocio: ConfigNegocio, data: TicketData): Promise<string | null> {
   const impresora = (negocio.impresora_termica || '').trim();
@@ -256,21 +256,32 @@ export async function imprimirTicketAuto(negocio: ConfigNegocio, data: TicketDat
     return 'no_printer';
   }
   try {
-    // 1) Obtener logo
-    const logo = await getLogoDataUrl();
-
-    // 2) Generar HTML del ticket
-    const html = buildTicketHTML(negocio, data, logo);
-
-    // 3) Renderizar a imagen PNG via html2canvas
-    const imagenBase64 = await renderTicketToBase64(html);
-
-    // 4) Enviar imagen a Rust para impresión ESC/POS raster
-    await invoke('imprimir_ticket_imagen', {
-      imagenBase64,
+    // Enviar datos directo a Rust — genera ESC/POS texto en <1ms y lo manda al spooler
+    await invoke('imprimir_ticket_termico', {
+      datos: {
+        negocio_nombre: negocio.nombre,
+        negocio_direccion: negocio.direccion,
+        negocio_telefono: negocio.telefono,
+        negocio_rfc: negocio.rfc,
+        mensaje_pie: negocio.mensaje_pie,
+        folio: data.folio,
+        fecha: data.fecha,
+        usuario: data.usuario.split(' ')[0],
+        cliente: data.cliente ?? null,
+        items: data.items.map(i => ({
+          cantidad: i.cantidad,
+          nombre: i.nombre,
+          precio_unitario: i.precio_final,
+          subtotal: i.subtotal,
+        })),
+        subtotal: data.subtotal,
+        descuento: data.descuento,
+        redondeo: data.redondeo ?? 0,
+        total: data.total,
+        metodo_pago: data.metodo_pago,
+      },
       impresora,
     });
-
     return null; // éxito
   } catch (e: any) {
     const msg = typeof e === 'string' ? e : e?.message || 'Error desconocido';
